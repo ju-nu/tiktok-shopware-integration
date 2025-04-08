@@ -306,7 +306,7 @@ class CsvProcessor
         var_dump($orderId);
         try {
             $escapedId = addcslashes($orderId, '%_'); // Escape LIKE wildcards
-            $response = $this->shopwareClient->get("orders?filter[0][property]=internalComment&filter[0][expression]=LIKE&filter[0][value]=TikTok ID: $escapedId");
+            $response = $this->shopwareClient->get("orders?filter[0][property]=internalComment&filter[0][expression]=LIKE&filter[0][value]=$escapedId");
             $data = json_decode($response->getBody()->getContents(), true);
             return $data['data'][0] ?? null; // Return first match or null if not found
         } catch (\Exception $e) {
