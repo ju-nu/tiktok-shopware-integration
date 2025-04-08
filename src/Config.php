@@ -10,7 +10,7 @@ class Config
     public function getLogger(): Logger
     {
         $logger = new Logger('tiktok_shopware_sync');
-        $logger->pushHandler(new StreamHandler($_ENV['APP_LOG_PATH'], Logger::DEBUG));
+        $logger->pushHandler(new StreamHandler($_ENV['APP_LOG_PATH'], Logger::DEBUG, true, null, 'w'));
         return $logger;
     }
 
