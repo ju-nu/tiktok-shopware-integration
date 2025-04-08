@@ -121,6 +121,10 @@ class CsvProcessor
             'City' => 'Unknown',
             'SellerSKU' => '',
             'SKUUnitOriginalPrice' => '0,00 EUR',
+            'SKUSubtotalAfterDiscount' => '0,00 EUR',
+            'SKUSubtotalBeforeDiscount' => '0,00 EUR',
+            'SKUSellerDiscount' => '0,00 EUR',
+            'SKUPlatformDiscount' => '0,00 EUR',
             'Quantity' => '1',
             'ProductName' => 'Unknown Product',
             'ShippingFeePlatformDiscount' => '0,00 EUR',
@@ -133,8 +137,8 @@ class CsvProcessor
             }
         }
     
-        // Use ShippingFeeAfterDiscount directly as invoiceShipping
-        $invoiceShipping = (float)str_replace(' EUR', '', $firstRow['ShippingFeeAfterDiscount']);
+        // Use OriginalShippingFee as invoiceShipping
+        $invoiceShipping = (float)str_replace(' EUR', '', $firstRow['OriginalShippingFee']);
         $invoiceAmount = (float)str_replace(' EUR', '', $firstRow['OrderAmount']);
     
         // Convert CreatedTime to Shopware's expected format (Y-m-d H:i:s)
@@ -154,13 +158,13 @@ class CsvProcessor
             'invoiceAmountNet' => 0, // Placeholder, calculated below
             'invoiceShipping' => $invoiceShipping,
             'invoiceShippingNet' => 0, // Placeholder, calculated below
-            'net' => 0, // Gross pricing
-            'taxFree' => 0, // Not tax-exempt
-            'currency' => 'EUR',
-            'currencyFactor' => 1.0,
+            'net' => 0, // Kept as 0 per your request
+            'taxFree' => 0, // Kept as 0 per your request
             'languageIso' => 1,
             'referer' => 'JUNU Importer',
-            'orderTime' => $orderTime, // Added Created Time as orderTime
+            'currency' => 'EUR',
+            'currencyFactor' => 1.0,
+            'orderTime' => $orderTime,
             'internalComment' => "TikTok Order ID: $orderId",
             'billing' => [
                 'firstName' => $recipient['firstName'],
@@ -212,7 +216,7 @@ class CsvProcessor
                 $taxId = 4; // Default to tax ID 4
             }
     
-            $unitPrice = (float)str_replace(' EUR', '', $row['SKUUnitOriginalPrice']);
+            $unitPrice = (float)str_replace(' EUR', '', $row['SKUUnitOriginalPrice']); // Artikelpreis
             $quantity = (int)$row['Quantity'];
             $orderData['details'][] = [
                 'articleId' => $article['id'],
@@ -225,13 +229,55 @@ class CsvProcessor
                 'statusId' => 0, // Open
             ];
     
+            // Add Seller Discount as a separate line item
+            $sellerDiscount = (float)str_replace(' EUR', '', $row['SKUSellerDiscount']);
+            if ($sellerDiscount != 0) {
+                $orderData['details'][] = [
+                    'articleNumber' => 'SELLER_DISCOUNT_' . $sellerSku,
+                    'articleName' => "Verkäuferrabatt auf Artikel ($sellerSku)",
+                    'quantity' => 1,
+                    'price' => -$sellerDiscount, // Negative to subtract
+                    'taxId' => $taxId,
+                    'taxRate' => (float)$taxRate,
+                    'statusId' => 0, // Open
+                ];
+            }
+    
+            // Add Platform Discount as a separate line item
+            $platformDiscount = (float)str_replace(' EUR', '', $row['SKUPlatformDiscount']);
+            if ($platformDiscount != 0) {
+                $orderData['details'][] = [
+                    'articleNumber' => 'PLATFORM_DISCOUNT_' . $sellerSku,
+                    'articleName' => "TikTok Shop-Rabatte auf Artikel ($sellerSku)",
+                    'quantity' => 1,
+                    'price' => -$platformDiscount, // Negative to subtract
+                    'taxId' => $taxId,
+                    'taxRate' => (float)$taxRate,
+                    'statusId' => 0, // Open
+                ];
+            }
+    
             $lastTaxRate = (float)$taxRate; // Store last tax rate for net calculations
         }
     
-        // Calculate net values using the last tax rate
+        // Add Shipping Fee Platform Discount as a tax-free line item
+        $shippingFeePlatformDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']);
+        if ($shippingFeePlatformDiscount != 0) {
+            $orderData['details'][] = [
+                'articleNumber' => 'SHIPPING_PLATFORM_DISCOUNT',
+                'articleName' => 'TikTok Shop-Versandgebühr-Rabatte',
+                'quantity' => 1,
+                'price' => -$shippingFeePlatformDiscount, // Negative to subtract
+                'taxId' => 5, // Tax-free (0% VAT)
+                'taxRate' => 0.00, // Tax-free
+                'statusId' => 0, // Open
+            ];
+        }
+    
+        // Calculate net values using the last tax rate (for articles, not shipping discount)
         $taxFactor = 1 + ($lastTaxRate / 100); // e.g., 1.07 for 7% VAT
         $orderData['invoiceAmountNet'] = round($invoiceAmount / $taxFactor, 2);
-        $orderData['invoiceShippingNet'] = round($invoiceShipping / $taxFactor, 2);
+        $orderData['invoiceShippingNet'] = round($invoiceShipping / 1.00, 2); // Shipping net = gross since tax-free discount
     
         try {
             $this->logger->debug("Order data being sent: " . json_encode($orderData));
