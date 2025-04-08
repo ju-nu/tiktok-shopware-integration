@@ -23,6 +23,20 @@ class ShopwareClient
         ]);
     }
 
+    public function get(string $endpoint): \Psr\Http\Message\ResponseInterface
+    {
+        return $this->retryRequest(function () use ($endpoint) {
+            return $this->client->get($endpoint);
+        }, "Fetching from $endpoint");
+    }
+
+    public function post(string $endpoint, array $options): \Psr\Http\Message\ResponseInterface
+    {
+        return $this->retryRequest(function () use ($endpoint, $options) {
+            return $this->client->post($endpoint, $options);
+        }, "Posting to $endpoint");
+    }
+
     public function getConfig(): array
     {
         return $this->config;
