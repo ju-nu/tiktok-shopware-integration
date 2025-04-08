@@ -141,8 +141,9 @@ class CsvProcessor
         $invoiceShipping = (float)str_replace(' EUR', '', $firstRow['OriginalShippingFee']);
         $invoiceAmount = (float)str_replace(' EUR', '', $firstRow['OrderAmount']);
     
-        // Convert CreatedTime to Shopware's expected format (Y-m-d H:i:s)
+        // Convert CreatedTime and PaidTime to Shopware's expected format (Y-m-d H:i:s)
         $orderTime = date('Y-m-d H:i:s', strtotime($firstRow['CreatedTime']));
+        $clearedDate = date('Y-m-d H:i:s', strtotime($firstRow['PaidTime']));
     
         // Get shopId from config, default to 1
         $shopId = $this->shopwareClient->getConfig()['shop_id'] ?? 1;
@@ -165,7 +166,8 @@ class CsvProcessor
             'currency' => 'EUR',
             'currencyFactor' => 1.0,
             'orderTime' => $orderTime,
-            'internalComment' => "TikTok Order ID: $orderId",
+            'clearedDate' => $clearedDate,
+            'internalComment' => "TikTok ID: $orderId",
             'billing' => [
                 'firstName' => $recipient['firstName'],
                 'lastName' => $recipient['lastName'],
@@ -235,7 +237,7 @@ class CsvProcessor
                 $orderData['details'][] = [
                     'articleId' => 0,
                     'articleNumber' => 'SELLER_DISCOUNT_' . $sellerSku,
-                    'articleName' => "Verkäuferrabatt auf Artikel ($sellerSku)",
+                    'articleName' => "Verkäuferrabatt auf Artikel $sellerSku",
                     'quantity' => 1,
                     'price' => -$sellerDiscount, // Negative to subtract
                     'taxId' => $taxId,
@@ -251,7 +253,7 @@ class CsvProcessor
                 $orderData['details'][] = [
                     'articleId' => 0,
                     'articleNumber' => 'PLATFORM_DISCOUNT_' . $sellerSku,
-                    'articleName' => "TikTok Shop-Rabatte auf Artikel ($sellerSku)",
+                    'articleName' => "TikTok Shop-Rabatte auf Artikel $sellerSku",
                     'quantity' => 1,
                     'price' => -$platformDiscount, // Negative to subtract
                     'taxId' => $taxId,
