@@ -250,28 +250,33 @@ class CsvProcessor
         $recipient = $this->splitRecipientName($row['Recipient'] ?? 'Unknown Unknown');
         $email = $row['Email'] ?? 'guest_' . uniqid() . '@example.com';
         $groupKey = 'TK';
-
+    
+        // Check if customer exists
         try {
             $checkResponse = $this->shopwareClient->get('customers', [
                 'query' => [
                     'filter' => [
                         ['property' => 'email', 'value' => $email],
-                        ['property' => 'groupKey', 'value' => $groupKey]
-                    ]
-                ]
+                        ['property' => 'groupKey', 'value' => $groupKey],
+                    ],
+                ],
             ]);
-
+    
             $existing = json_decode($checkResponse->getBody()->getContents(), true);
-
-            if (!empty($existing['data']) && isset($existing['data'][0]['id'])) {
-                $existingId = $existing['data'][0]['id'];
-                $this->logger->info("Existing customer found for email $email: ID $existingId");
-                return $existingId;
+            if (isset($existing['data']) && !empty($existing['data'])) {
+                foreach ($existing['data'] as $customer) {
+                    if ($customer['email'] === $email && $customer['groupKey'] === $groupKey) {
+                        $existingId = $customer['id'];
+                        $this->logger->info("Existing customer found for email $email: ID $existingId");
+                        return $existingId;
+                    }
+                }
             }
         } catch (\Exception $e) {
             $this->logger->warning("Failed to check for existing customer for $email: " . $e->getMessage());
         }
-
+    
+        // Create new guest customer if not found
         $customerData = [
             'email' => $email,
             'active' => true,
@@ -299,7 +304,7 @@ class CsvProcessor
                 'countryId' => $this->shopwareClient->getConfig()['country_id'],
             ],
         ];
-
+    
         try {
             $response = $this->shopwareClient->post('customers', ['json' => $customerData]);
             $data = json_decode($response->getBody()->getContents(), true);
