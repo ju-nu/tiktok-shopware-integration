@@ -17,7 +17,7 @@
     </style>
 </head>
 <body class="bg-gray-100 p-8">
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <h1 class="text-2xl font-bold mb-4 text-center">📄 Live Log Viewer</h1>
         <div id="log-container"></div>
     </div>
