@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Live Log Viewer</title>
-    <meta http-equiv="refresh" content="0; URL=/log_viewer.php">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         #log-container {
