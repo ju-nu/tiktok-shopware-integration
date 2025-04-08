@@ -1,4 +1,4 @@
-# TikTok Shop zu Shopware 5 Synchronisation
+# TikTok Shop XML zu Shopware 5 Sychronisation
 
 ## Überblick
 
