@@ -100,7 +100,29 @@ class CsvProcessor
         $this->logger->info("Creating order for TikTok Order ID: $orderId");
     
         $firstRow = $orderRows[0];
-        $recipient = $this->splitRecipientName($firstRow['Recipient']);
+        $recipient = $this->splitRecipientName($firstRow['Recipient'] ?? 'Unknown Unknown');
+    
+        // Validate required fields with defaults (using normalized keys)
+        $requiredFields = [
+            'OrderAmount' => '0,00 EUR',
+            'ShippingFeeAfterDiscount' => '0,00 EUR',
+            'StreetName' => 'Unknown',
+            'HouseNameorNumber' => '',
+            'Zipcode' => '00000',
+            'City' => 'Unknown',
+            'SellerSKU' => '',
+            'SKUUnitOriginalPrice' => '0,00 EUR',
+            'Quantity' => '1',
+            'ProductName' => 'Unknown Product',
+            'ShippingFeePlatformDiscount' => '0,00 EUR',
+        ];
+        foreach ($requiredFields as $key => $default) {
+            if (!isset($firstRow[$key]) || empty(trim($firstRow[$key]))) {
+                $this->logger->warning("Missing or empty '$key' in order $orderId, using default: '$default'");
+                $firstRow[$key] = $default;
+            }
+        }
+    
         $orderData = [
             'number' => $orderId,
             'customerId' => null,
@@ -108,15 +130,15 @@ class CsvProcessor
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
             'orderStatusId' => 5,
             'paymentStatusId' => 12,
-            'invoiceAmount' => (float)str_replace(' EUR', '', $firstRow['Order Amount']), // Line 114
-            'invoiceShipping' => (float)str_replace(' EUR', '', $firstRow['Shipping Fee After Discount']), // Line 115
+            'invoiceAmount' => (float)str_replace(' EUR', '', $firstRow['OrderAmount']),
+            'invoiceShipping' => (float)str_replace(' EUR', '', $firstRow['ShippingFeeAfterDiscount']),
             'currency' => 'EUR',
             'currencyFactor' => 1.0,
             'billing' => [
                 'firstName' => $recipient['firstName'],
                 'lastName' => $recipient['lastName'],
-                'street' => $firstRow['Street Name'], // Line 121
-                'streetNumber' => $firstRow['House Name or Number'], // Line 122
+                'street' => $firstRow['StreetName'],
+                'streetNumber' => $firstRow['HouseNameorNumber'],
                 'zipcode' => $firstRow['Zipcode'],
                 'city' => $firstRow['City'],
                 'countryId' => $this->shopwareClient->getConfig()['country_id'],
@@ -124,8 +146,8 @@ class CsvProcessor
             'shipping' => [
                 'firstName' => $recipient['firstName'],
                 'lastName' => $recipient['lastName'],
-                'street' => $firstRow['Street Name'], // Line 130
-                'streetNumber' => $firstRow['House Name or Number'], // Line 131
+                'street' => $firstRow['StreetName'],
+                'streetNumber' => $firstRow['HouseNameorNumber'],
                 'zipcode' => $firstRow['Zipcode'],
                 'city' => $firstRow['City'],
                 'countryId' => $this->shopwareClient->getConfig()['country_id'],
@@ -137,36 +159,50 @@ class CsvProcessor
         ];
     
         foreach ($orderRows as $row) {
-            $article = $this->shopwareClient->getArticleByNumber($row['Seller SKU']); // Line 144
-            if (!$article) {
-                $this->logger->error("Skipping item with SKU {$row['Seller SKU']} - not found in Shopware");
+            foreach ($requiredFields as $key => $default) {
+                if (!isset($row[$key]) || empty(trim($row[$key]))) {
+                    $row[$key] = $default;
+                }
+            }
+    
+            $sellerSku = $row['SellerSKU'];
+            if (empty($sellerSku)) {
+                $this->logger->error("Skipping item in order $orderId - missing 'SellerSKU'");
                 continue;
             }
-
-            $unitPrice = (float)str_replace(' EUR', '', $row['SKU Unit Original Price']);
+    
+            $article = $this->shopwareClient->getArticleByNumber($sellerSku);
+            if (!$article) {
+                $this->logger->error("Skipping item with SKU $sellerSku in order $orderId - not found in Shopware");
+                continue;
+            }
+    
+            $unitPrice = (float)str_replace(' EUR', '', $row['SKUUnitOriginalPrice']);
             $quantity = (int)$row['Quantity'];
             $orderData['details'][] = [
                 'articleId' => $article['id'],
-                'articleNumber' => $row['Seller SKU'],
-                'name' => $row['Product Name'],
+                'articleNumber' => $sellerSku,
+                'name' => $row['ProductName'],
                 'quantity' => $quantity,
                 'price' => $unitPrice,
                 'taxId' => $article['mainDetail']['taxId'],
             ];
+    
+            // Store the last valid taxId for potential use in shipping discount
+            $lastTaxId = $article['mainDetail']['taxId'];
         }
-
-        // Add shipping discount if applicable
-        $shippingFeeDiscount = (float)str_replace(' EUR', '', $firstRow['Shipping Fee Platform Discount']);
+    
+        $shippingFeeDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']);
         if ($shippingFeeDiscount > 0) {
             $orderData['details'][] = [
                 'articleNumber' => 'SHIPPING_DISCOUNT',
                 'name' => 'Shipping Discount (TikTok)',
                 'quantity' => 1,
                 'price' => -$shippingFeeDiscount,
-                'taxId' => $article['mainDetail']['taxId'], // Use tax from first product
+                'taxId' => $lastTaxId ?? 1, // Use last valid taxId or fallback to 1
             ];
         }
-
+    
         try {
             $response = $this->shopwareClient->createOrder($orderData);
             $this->logger->info("Order created successfully: Shopware Order ID {$response['id']}");
