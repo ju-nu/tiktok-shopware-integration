@@ -66,8 +66,14 @@ class ShopwareClient
     {
         return $this->retryRequest(function () use ($data) {
             $response = $this->client->post('orders', ['json' => $data]);
-            return json_decode($response->getBody()->getContents(), true);
-        }, "Creating order {$data['number']}");
+            $responseBody = $response->getBody()->getContents();
+            $this->logger->debug("Raw API response for order creation: " . $responseBody);
+            $decodedResponse = json_decode($responseBody, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception("Failed to decode API response: " . json_last_error_msg());
+            }
+            return $decodedResponse; // Should return {"success": true, "data": {"id": 1657025, ...}}
+        }, "Creating order" . (isset($data['number']) ? " {$data['number']}" : ""));
     }
 
     private function retryRequest(callable $request, string $action): mixed
