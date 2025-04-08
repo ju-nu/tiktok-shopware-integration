@@ -98,25 +98,25 @@ class CsvProcessor
     private function createShopwareOrder(string $orderId, array $orderRows): void
     {
         $this->logger->info("Creating order for TikTok Order ID: $orderId");
-
+    
         $firstRow = $orderRows[0];
         $recipient = $this->splitRecipientName($firstRow['Recipient']);
         $orderData = [
             'number' => $orderId,
-            'customerId' => null, // TikTok doesn't provide customer ID; could create guest customer
+            'customerId' => null,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
-            'orderStatusId' => 5, // "Zur Lieferung bereit" (Ready to be shipped)
-            'paymentStatusId' => 12, // "Komplett bezahlt" (Payed)
-            'invoiceAmount' => (float)str_replace(' EUR', '', $firstRow['Order Amount']),
-            'invoiceShipping' => (float)str_replace(' EUR', '', $firstRow['Shipping Fee After Discount']),
+            'orderStatusId' => 5,
+            'paymentStatusId' => 12,
+            'invoiceAmount' => (float)str_replace(' EUR', '', $firstRow['Order Amount']), // Line 114
+            'invoiceShipping' => (float)str_replace(' EUR', '', $firstRow['Shipping Fee After Discount']), // Line 115
             'currency' => 'EUR',
             'currencyFactor' => 1.0,
             'billing' => [
                 'firstName' => $recipient['firstName'],
                 'lastName' => $recipient['lastName'],
-                'street' => $firstRow['Street Name'],
-                'streetNumber' => $firstRow['House Name or Number'],
+                'street' => $firstRow['Street Name'], // Line 121
+                'streetNumber' => $firstRow['House Name or Number'], // Line 122
                 'zipcode' => $firstRow['Zipcode'],
                 'city' => $firstRow['City'],
                 'countryId' => $this->shopwareClient->getConfig()['country_id'],
@@ -124,23 +124,22 @@ class CsvProcessor
             'shipping' => [
                 'firstName' => $recipient['firstName'],
                 'lastName' => $recipient['lastName'],
-                'street' => $firstRow['Street Name'],
-                'streetNumber' => $firstRow['House Name or Number'],
+                'street' => $firstRow['Street Name'], // Line 130
+                'streetNumber' => $firstRow['House Name or Number'], // Line 131
                 'zipcode' => $firstRow['Zipcode'],
                 'city' => $firstRow['City'],
                 'countryId' => $this->shopwareClient->getConfig()['country_id'],
             ],
             'attribute' => [
-                'attribute1' => $orderId, // Store TikTok Order ID in custom field
+                'attribute1' => $orderId,
             ],
             'details' => [],
         ];
-
-        // Add order items
+    
         foreach ($orderRows as $row) {
-            $article = $this->shopwareClient->getArticleByNumber($row['Seller SKU']);
+            $article = $this->shopwareClient->getArticleByNumber($row['Seller SKU']); // Line 144
             if (!$article) {
-                $this->logger->error("Article not found for SKU: {$row['Seller SKU']}");
+                $this->logger->error("Skipping item with SKU {$row['Seller SKU']} - not found in Shopware");
                 continue;
             }
 
