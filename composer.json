@@ -1,5 +1,5 @@
 {
-    "name": "tiktok-shopware-integration",
+    "name": "ju-nu/tiktok-shopware-integration",
     "description": "Sync TikTok order CSVs with Shopware 5",
     "require": {
         "php": "^8.3",
