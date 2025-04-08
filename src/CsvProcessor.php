@@ -143,7 +143,7 @@ class CsvProcessor
             'customerId' => $customerId,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
-            'orderStatusId' => 1,
+            'orderStatusId' => 5,
             'paymentStatusId' => 12,
             'invoiceAmount' => (float)str_replace(' EUR', '', $firstRow['OrderAmount']),
             'invoiceShipping' => $invoiceShipping,
@@ -207,7 +207,7 @@ class CsvProcessor
                 'quantity' => $quantity,
                 'price' => $unitPrice,
                 'taxId' => $taxId,
-                'statusId' => 5, // "Zur Lieferung bereit"
+                'statusId' => 0, // "Zur Lieferung bereit"
             ];
 
             $lastTaxId = $taxId;
@@ -221,7 +221,7 @@ class CsvProcessor
                 'quantity' => 1,
                 'price' => -$shippingFeeDiscount,
                 'taxId' => $lastTaxId ?? 1,
-                'statusId' => 5, // "Zur Lieferung bereit"
+                'statusId' => 0, // "Zur Lieferung bereit"
             ];
         }
 
