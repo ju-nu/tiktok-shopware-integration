@@ -288,6 +288,7 @@ class CsvProcessor
             'billing' => [
                 'firstName' => $recipient['firstName'],
                 'lastName' => $recipient['lastName'],
+                'salutation' => 'mr',
                 'street' => $row['StreetName'] ?? 'Unknown',
                 'streetNumber' => $row['HouseNameorNumber'] ?? '',
                 'zipcode' => $row['Zipcode'] ?? '00000',
@@ -297,6 +298,7 @@ class CsvProcessor
             'shipping' => [
                 'firstName' => $recipient['firstName'],
                 'lastName' => $recipient['lastName'],
+                'salutation' => 'mr',
                 'street' => $row['StreetName'] ?? 'Unknown',
                 'streetNumber' => $row['HouseNameorNumber'] ?? '',
                 'zipcode' => $row['Zipcode'] ?? '00000',
