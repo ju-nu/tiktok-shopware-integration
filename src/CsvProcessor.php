@@ -233,13 +233,14 @@ class CsvProcessor
             $sellerDiscount = (float)str_replace(' EUR', '', $row['SKUSellerDiscount']);
             if ($sellerDiscount != 0) {
                 $orderData['details'][] = [
+                    'articleId' => 0,
                     'articleNumber' => 'SELLER_DISCOUNT_' . $sellerSku,
                     'articleName' => "Verkäuferrabatt auf Artikel ($sellerSku)",
                     'quantity' => 1,
                     'price' => -$sellerDiscount, // Negative to subtract
                     'taxId' => $taxId,
                     'taxRate' => (float)$taxRate,
-                    'modus' => 2,
+                    'mode' => 4,
                     'statusId' => 0, // Open
                 ];
             }
@@ -248,13 +249,14 @@ class CsvProcessor
             $platformDiscount = (float)str_replace(' EUR', '', $row['SKUPlatformDiscount']);
             if ($platformDiscount != 0) {
                 $orderData['details'][] = [
+                    'articleId' => 0,
                     'articleNumber' => 'PLATFORM_DISCOUNT_' . $sellerSku,
                     'articleName' => "TikTok Shop-Rabatte auf Artikel ($sellerSku)",
                     'quantity' => 1,
                     'price' => -$platformDiscount, // Negative to subtract
                     'taxId' => $taxId,
                     'taxRate' => (float)$taxRate,
-                    'modus' => 2,
+                    'mode' => 4,
                     'statusId' => 0, // Open
                 ];
             }
@@ -266,13 +268,14 @@ class CsvProcessor
         $shippingFeePlatformDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']);
         if ($shippingFeePlatformDiscount != 0) {
             $orderData['details'][] = [
+                'articleId' => 0,
                 'articleNumber' => 'SHIPPING_PLATFORM_DISCOUNT',
                 'articleName' => 'TikTok Shop-Versandgebühr-Rabatte',
                 'quantity' => 1,
                 'price' => -$shippingFeePlatformDiscount, // Negative to subtract
                 'taxId' => 5, // Tax-free (0% VAT)
                 'taxRate' => 0.00, // Tax-free
-                'modus' => 2,
+                'mode' => 4,
                 'statusId' => 0, // Open
             ];
         }
