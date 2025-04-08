@@ -12,8 +12,15 @@ class Config
     {
         $logger = new Logger('tiktok_shopware_sync');
         // Keep up to 7 daily log files by default
-        $logger->pushHandler(new RotatingFileHandler($_ENV['APP_LOG_PATH'], 7, Logger::DEBUG));
-        
+        $logger->pushHandler(new RotatingFileHandler(
+            $_ENV['APP_LOG_PATH'], // base filename (e.g. /path/to/app.log)
+            7,                     // keep up to 7 rotated files
+            Logger::DEBUG,
+            true,                  // bubble
+            0644,                  // file permissions
+            true,                  // use locking
+            '',                    // empty date format = classic suffixes (.1, .2, .3)
+        ));
         return $logger;
     }
 
