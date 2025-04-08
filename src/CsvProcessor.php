@@ -239,6 +239,7 @@ class CsvProcessor
                     'price' => -$sellerDiscount, // Negative to subtract
                     'taxId' => $taxId,
                     'taxRate' => (float)$taxRate,
+                    'modus' => 2,
                     'statusId' => 0, // Open
                 ];
             }
@@ -253,6 +254,7 @@ class CsvProcessor
                     'price' => -$platformDiscount, // Negative to subtract
                     'taxId' => $taxId,
                     'taxRate' => (float)$taxRate,
+                    'modus' => 2,
                     'statusId' => 0, // Open
                 ];
             }
@@ -270,6 +272,7 @@ class CsvProcessor
                 'price' => -$shippingFeePlatformDiscount, // Negative to subtract
                 'taxId' => 5, // Tax-free (0% VAT)
                 'taxRate' => 0.00, // Tax-free
+                'modus' => 2,
                 'statusId' => 0, // Open
             ];
         }
