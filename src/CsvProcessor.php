@@ -124,6 +124,7 @@ class CsvProcessor
             'Quantity' => '1',
             'ProductName' => 'Unknown Product',
             'ShippingFeePlatformDiscount' => '0,00 EUR',
+            'CreatedTime' => date('Y-m-d H:i:s'), // Default to now if missing
         ];
         foreach ($requiredFields as $key => $default) {
             if (!isset($firstRow[$key]) || empty(trim($firstRow[$key]))) {
@@ -136,26 +137,29 @@ class CsvProcessor
         $invoiceShipping = (float)str_replace(' EUR', '', $firstRow['ShippingFeeAfterDiscount']);
         $invoiceAmount = (float)str_replace(' EUR', '', $firstRow['OrderAmount']);
     
+        // Convert CreatedTime to Shopware's expected format (Y-m-d H:i:s)
+        $orderTime = date('Y-m-d H:i:s', strtotime($firstRow['CreatedTime']));
+    
         // Get shopId from config, default to 1
         $shopId = $this->shopwareClient->getConfig()['shop_id'] ?? 1;
     
         $orderData = [
-            'number' => $orderId,
             'customerId' => $customerId,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
-            'shopId' => $shopId, // Added shopId
+            'shopId' => $shopId,
             'orderStatusId' => 5, // "Zur Lieferung bereit"
             'paymentStatusId' => 12, // "Komplett bezahlt"
             'invoiceAmount' => $invoiceAmount,
             'invoiceAmountNet' => 0, // Placeholder, calculated below
             'invoiceShipping' => $invoiceShipping,
             'invoiceShippingNet' => 0, // Placeholder, calculated below
-            'net' => 0, // Gross pricing (includes VAT)
+            'net' => 0, // Gross pricing
             'taxFree' => 0, // Not tax-exempt
-            'languageIso' => 1,
             'currency' => 'EUR',
             'currencyFactor' => 1.0,
+            'referer' => 'JUNU Importer',
+            'orderTime' => $orderTime, // Added Created Time as orderTime
             'internalComment' => "TikTok Order ID: $orderId",
             'billing' => [
                 'firstName' => $recipient['firstName'],
@@ -164,7 +168,7 @@ class CsvProcessor
                 'streetNumber' => $firstRow['HouseNameorNumber'],
                 'zipcode' => $firstRow['Zipcode'],
                 'city' => $firstRow['City'],
-                'countryId' => $this->shopwareClient->getConfig()['country_id'],
+                'country' => $this->shopwareClient->getConfig()['country_id'],
             ],
             'shipping' => [
                 'firstName' => $recipient['firstName'],
@@ -173,7 +177,7 @@ class CsvProcessor
                 'streetNumber' => $firstRow['HouseNameorNumber'],
                 'zipcode' => $firstRow['Zipcode'],
                 'city' => $firstRow['City'],
-                'countryId' => $this->shopwareClient->getConfig()['country_id'],
+                'country' => $this->shopwareClient->getConfig()['country_id'],
             ],
             'details' => [],
         ];
@@ -200,9 +204,11 @@ class CsvProcessor
             }
     
             $taxRate = $article['tax']['tax'] ?? null;
-            if (!$taxRate) {
-                $this->logger->warning("No tax rate found for SKU $sellerSku in order $orderId, using fallback tax rate 19.00");
-                $taxRate = 19.00; // Default to 19% VAT
+            $taxId = $article['tax']['id'] ?? null;
+            if (!$taxRate || !$taxId) {
+                $this->logger->warning("No tax rate or ID found for SKU $sellerSku in order $orderId, using fallback tax rate 7.00 and tax ID 4");
+                $taxRate = 7.00; // Default to 7% VAT
+                $taxId = 4; // Default to tax ID 4
             }
     
             $unitPrice = (float)str_replace(' EUR', '', $row['SKUUnitOriginalPrice']);
@@ -213,7 +219,7 @@ class CsvProcessor
                 'articleName' => $row['ProductName'],
                 'quantity' => $quantity,
                 'price' => $unitPrice,
-                'taxId' => $article['tax']['id'] ?? 1,
+                'taxId' => $taxId,
                 'taxRate' => (float)$taxRate,
                 'statusId' => 0, // Open
             ];
@@ -222,14 +228,15 @@ class CsvProcessor
         }
     
         // Calculate net values using the last tax rate
-        $taxFactor = 1 + ($lastTaxRate / 100); // e.g., 1.19 for 19% VAT
+        $taxFactor = 1 + ($lastTaxRate / 100); // e.g., 1.07 for 7% VAT
         $orderData['invoiceAmountNet'] = round($invoiceAmount / $taxFactor, 2);
         $orderData['invoiceShippingNet'] = round($invoiceShipping / $taxFactor, 2);
     
         try {
             $this->logger->debug("Order data being sent: " . json_encode($orderData));
             $response = $this->shopwareClient->createOrder($orderData);
-            $this->logger->info("Order created successfully: Shopware Order ID {$response['id']}");
+            $orderIdResponse = $response['data']['id'] ?? 'unknown'; // Safely access nested id
+            $this->logger->info("Order created successfully: Shopware Order ID $orderIdResponse");
         } catch (\Exception $e) {
             $this->logger->error("Failed to create order $orderId: " . $e->getMessage());
         }
