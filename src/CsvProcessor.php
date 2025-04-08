@@ -342,6 +342,8 @@ class CsvProcessor
             $this->logger->warning("Failed to check for existing customer for $email: " . $e->getMessage());
         }
 
+        $phoneNumber = str_replace('(+49)', '0', $row['Phone#'] ?? '');
+
         // Create new guest customer if not found
         $customerData = [
             'email' => $email,
@@ -360,7 +362,7 @@ class CsvProcessor
                 'zipcode' => $row['Zipcode'] ?? '00000',
                 'city' => $row['City'] ?? 'Unknown',
                 'country' => $this->shopwareClient->getConfig()['country_id'],
-                'phone' => $row['Phone#'] ?? '', // Add phone number
+                'phone' => $phoneNumber, // Add phone number
             ],
             'shipping' => [
                 'firstName' => $recipient['firstName'],
@@ -371,7 +373,7 @@ class CsvProcessor
                 'zipcode' => $row['Zipcode'] ?? '00000',
                 'city' => $row['City'] ?? 'Unknown',
                 'country' => $this->shopwareClient->getConfig()['country_id'],
-                'phone' => $row['Phone#'] ?? '', // Add phone number
+                'phone' => $phoneNumber, // Add phone number
             ],
         ];
 
