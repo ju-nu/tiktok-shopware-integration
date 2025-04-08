@@ -32,7 +32,7 @@ Diese Web-Anwendung wurde als individuelle Lösung für die **Kräuterland Natur
 ## Installation
 
 ### Voraussetzungen
-- PHP >= 7.4
+- PHP >= 8.3
 - Composer für Abhängigkeitsverwaltung
 - Shopware 5 Instanz mit API-Zugriff
 - Supervisor (für Hintergrundprozesse)
@@ -52,7 +52,7 @@ Diese Web-Anwendung wurde als individuelle Lösung für die **Kräuterland Natur
 3. **Konfiguration erstellen:**
    - Kopiere `.env.example` nach `.env` und passe die Werte an:
      ```env
-     SHOPWARE_API_URL=https://www.kraeuterland.de/api
+     SHOPWARE_API_URL=https://www.kraeuterland.de/api/
      SHOPWARE_API_USERNAME=<your-username>
      SHOPWARE_API_KEY=<your-api-key>
      SHOPWARE_PAYMENT_METHOD_ID=123
