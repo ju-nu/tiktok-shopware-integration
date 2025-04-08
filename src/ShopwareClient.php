@@ -59,7 +59,7 @@ class ShopwareClient
 
                 if ($statusCode === 429 || $statusCode >= 500) { // Rate limit or server error
                     $wait = pow(2, $attempts) * 1000; // Exponential backoff in milliseconds
-                    $this->logger->warning("$action failed (attempt $attempts/$maxAttempts): {$e->getMessage}. Retrying in $wait ms.");
+                    $this->logger->warning("$action failed (attempt $attempts/$maxAttempts): " . $e->getMessage() . ". Retrying in $wait ms.");
                     usleep($wait * 1000);
                 } else {
                     throw $e; // Non-retryable error
