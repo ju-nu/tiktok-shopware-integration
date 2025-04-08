@@ -114,7 +114,7 @@ class CsvProcessor
         $requiredFields = [
             'OrderAmount' => '0,00 EUR',
             'ShippingFeeAfterDiscount' => '0,00 EUR',
-            'OriginalShippingFee' => '0,00 EUR',
+            'OriginalShippingFee' => '0,00 EUR', // Still included for completeness, though not used here
             'StreetName' => 'Unknown',
             'HouseNameorNumber' => '',
             'Zipcode' => '00000',
@@ -132,11 +132,8 @@ class CsvProcessor
             }
         }
     
-        // Calculate invoiceShipping
-        $originalShipping = (float)str_replace(' EUR', '', $firstRow['OriginalShippingFee']);
-        $shippingDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']) +
-                           (float)str_replace(' EUR', '', $firstRow['ShippingFeeSellerDiscount'] ?? '0,00 EUR');
-        $invoiceShipping = max(0, $originalShipping - $shippingDiscount);
+        // Use ShippingFeeAfterDiscount directly as invoiceShipping
+        $invoiceShipping = (float)str_replace(' EUR', '', $firstRow['ShippingFeeAfterDiscount']);
     
         $orderData = [
             'number' => $orderId,
@@ -171,8 +168,6 @@ class CsvProcessor
             'details' => [],
         ];
     
-        $lastTaxRate = null;
-    
         foreach ($orderRows as $row) {
             foreach ($requiredFields as $key => $default) {
                 if (!isset($row[$key]) || empty(trim($row[$key]))) {
@@ -203,26 +198,11 @@ class CsvProcessor
             $orderData['details'][] = [
                 'articleId' => $article['id'],
                 'articleNumber' => $sellerSku,
-                'articleName' => $row['ProductName'],
+                'articleName' => $row['ProductName'], // Changed from 'name' to 'articleName'
                 'quantity' => $quantity,
                 'price' => $unitPrice,
                 'taxId' => $article['tax']['id'] ?? 4,
-                'taxRate' => (float)$taxRate, // Add taxRate from article
-                'statusId' => 0, // Open
-            ];
-    
-            $lastTaxRate = $taxRate;
-        }
-    
-        $shippingFeeDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']);
-        if ($shippingFeeDiscount > 0) {
-            $orderData['details'][] = [
-                'articleNumber' => 'SHIPPING_DISCOUNT',
-                'articleName' => 'Shipping Discount (TikTok)', // Ensure valid name
-                'quantity' => 1,
-                'price' => -$shippingFeeDiscount,
-                'taxId' => 5, // Use last tax ID or fallback
-                'taxRate' => 0, // Use last tax rate or fallback
+                'taxRate' => (float)$taxRate,
                 'statusId' => 0, // Open
             ];
         }
