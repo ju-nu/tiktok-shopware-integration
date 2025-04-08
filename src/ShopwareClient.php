@@ -31,7 +31,7 @@ class ShopwareClient
     public function getArticleByNumber(string $articleNumber): ?array
     {
         return $this->retryRequest(function () use ($articleNumber) {
-            $response = $this->client->get("articles?filter[0][property]=number&filter[0][value]=$articleNumber");
+            $response = $this->client->get("articles/$articleNumber?useNumberAsId=true");
             $data = json_decode($response->getBody()->getContents(), true);
             return $data['data'][0] ?? null;
         }, "Fetching article $articleNumber");
