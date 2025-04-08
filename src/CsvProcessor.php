@@ -228,6 +228,7 @@ class CsvProcessor
         try {
             $response = $this->shopwareClient->createOrder($orderData);
             $this->logger->info("Order created successfully: Shopware Order ID {$response['id']}");
+            die();
         } catch (\Exception $e) {
             $this->logger->error("Failed to create order $orderId: " . $e->getMessage());
         }

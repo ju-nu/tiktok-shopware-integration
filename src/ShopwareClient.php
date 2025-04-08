@@ -22,7 +22,7 @@ class ShopwareClient
             'headers' => ['Content-Type' => 'application/json'],
         ]);
     }
-    
+
     public function get(string $endpoint, array $options = []): \Psr\Http\Message\ResponseInterface
     {
         return $this->retryRequest(function () use ($endpoint, $options) {
@@ -64,8 +64,6 @@ class ShopwareClient
 
     public function createOrder(array $data): array
     {
-        var_dump($data);
-        die();
         return $this->retryRequest(function () use ($data) {
             $response = $this->client->post('orders', ['json' => $data]);
             return json_decode($response->getBody()->getContents(), true);
