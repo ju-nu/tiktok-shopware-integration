@@ -36,6 +36,9 @@ class CsvProcessor
         }
         fclose($handle);
 
+        var_dump($orders);
+        die();
+
         foreach ($orders as $orderId => $orderRows) {
             $this->createShopwareOrder($orderId, $orderRows);
         }
