@@ -55,8 +55,8 @@ class CsvProcessor
             'customerId' => null, // TikTok doesn't provide customer ID; could create guest customer
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
-            'orderStatusId' => 1, // "Ready to be shipped"
-            'paymentStatusId' => 12, // "Payed"
+            'orderStatusId' => 5, // "Zur Lieferung bereit" (Ready to be shipped)
+            'paymentStatusId' => 12, // "Komplett bezahlt" (Payed)
             'invoiceAmount' => (float)str_replace(' EUR', '', $firstRow['Order Amount']),
             'invoiceShipping' => (float)str_replace(' EUR', '', $firstRow['Shipping Fee After Discount']),
             'currency' => 'EUR',
