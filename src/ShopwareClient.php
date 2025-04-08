@@ -22,11 +22,11 @@ class ShopwareClient
             'headers' => ['Content-Type' => 'application/json'],
         ]);
     }
-
-    public function get(string $endpoint): \Psr\Http\Message\ResponseInterface
+    
+    public function get(string $endpoint, array $options = []): \Psr\Http\Message\ResponseInterface
     {
-        return $this->retryRequest(function () use ($endpoint) {
-            return $this->client->get($endpoint);
+        return $this->retryRequest(function () use ($endpoint, $options) {
+            return $this->client->get($endpoint, $options);
         }, "Fetching from $endpoint");
     }
 
