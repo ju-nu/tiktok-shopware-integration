@@ -65,7 +65,6 @@ class ShopwareClient
     public function createOrder(array $data): array
     {
         var_dump($data);
-        die();
         return $this->retryRequest(function () use ($data) {
             $response = $this->client->post('orders', ['json' => $data]);
             return json_decode($response->getBody()->getContents(), true);
