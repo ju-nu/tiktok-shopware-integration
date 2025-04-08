@@ -2,6 +2,7 @@
 
 namespace TikTokShopwareSync;
 
+use Dotenv\Dotenv; // Import the correct Dotenv class
 use Psr\Log\LoggerInterface;
 
 class Worker
@@ -12,7 +13,8 @@ class Worker
 
     public function __construct()
     {
-        $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+        // Use the imported Dotenv class
+        $dotenv = Dotenv::createImmutable(__DIR__ . '/../');
         $dotenv->load();
 
         $this->config = new Config();
