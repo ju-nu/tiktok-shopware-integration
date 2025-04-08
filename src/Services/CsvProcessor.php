@@ -34,19 +34,44 @@ class CsvProcessor
     {
         $orders = [];
         if (($handle = fopen($filePath, 'r')) !== false) {
+            // Get headers and remove BOM if present
             $headers = fgetcsv($handle, 0, ',');
+            if ($headers === false) {
+                $this->logger->error("Failed to read headers from CSV: $filePath");
+                fclose($handle);
+                return [];
+            }
+            $headers = array_map(function ($header) {
+                return trim($header, "\ufeff"); // Remove BOM
+            }, $headers);
+
             while (($row = fgetcsv($handle, 0, ',')) !== false) {
+                if (count($row) !== count($headers)) {
+                    $this->logger->warning("Row column count mismatch: " . implode(',', $row));
+                    continue;
+                }
                 $data = array_combine($headers, $row);
+                if ($data === false) {
+                    $this->logger->warning("Failed to combine headers with row: " . implode(',', $row));
+                    continue;
+                }
+                if (!isset($data['Order ID'])) {
+                    $this->logger->error("Missing 'Order ID' in row: " . implode(',', $row));
+                    continue;
+                }
                 $orderId = $data['Order ID'];
                 $orders[$orderId][] = $data;
             }
             fclose($handle);
+        } else {
+            $this->logger->error("Failed to open CSV file: $filePath");
         }
         return $orders;
     }
 
     private function createShopwareOrder(string $orderId, array $items): void
     {
+        // Rest of the method remains unchanged
         $paymentId = $this->shopwareClient->getPaymentMethodId('TikTok');
         if (!$paymentId) {
             $this->logger->error("Payment method 'TikTok' not found");
@@ -89,7 +114,7 @@ class CsvProcessor
                 'name' => 'Shipping Cost',
                 'quantity' => 1,
                 'price' => $shippingFee,
-                'taxId' => 1, // Default tax ID, adjust as needed
+                'taxId' => 1,
             ];
         }
         if ($shippingDiscount > 0) {
@@ -113,7 +138,7 @@ class CsvProcessor
                 'street' => $firstItem['Street Name'],
                 'zipCode' => $firstItem['Zipcode'],
                 'city' => $firstItem['City'],
-                'countryId' => 2, // Germany, adjust as needed
+                'countryId' => 2,
             ],
             'shipping' => [
                 'firstName' => $firstName,
@@ -124,11 +149,11 @@ class CsvProcessor
                 'countryId' => 2,
             ],
             'payment' => ['id' => $paymentId],
-            'orderStatus' => 1, // Ready to be shipped
-            'paymentStatus' => 12, // Paid
+            'orderStatus' => 1,
+            'paymentStatus' => 12,
             'details' => $orderDetails,
             'invoiceAmount' => $total,
-            'attribute' => ['attribute1' => $orderId], // tiktok_order_id
+            'attribute' => ['attribute1' => $orderId],
         ];
 
         $this->shopwareClient->createOrder($orderData);
