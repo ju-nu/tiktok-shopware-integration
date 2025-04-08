@@ -138,6 +138,7 @@ class CsvProcessor
     
         $orderData = [
             'number' => $orderId,
+            'shopId' => 1,
             'customerId' => $customerId,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
