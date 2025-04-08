@@ -343,6 +343,7 @@ class CsvProcessor
         }
 
         $phoneNumber = str_replace('(+49)', '0', $row['Phone#'] ?? '');
+        var_dump($phoneNumber);
 
         // Create new guest customer if not found
         $customerData = [
