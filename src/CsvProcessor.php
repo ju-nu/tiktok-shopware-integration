@@ -172,6 +172,8 @@ class CsvProcessor
             }
     
             $article = $this->shopwareClient->getArticleByNumber($sellerSku);
+            var_dump($article);
+            die();
             if (!$article) {
                 $this->logger->error("Skipping item with SKU $sellerSku in order $orderId - not found in Shopware");
                 continue;
@@ -185,7 +187,7 @@ class CsvProcessor
                 'name' => $row['ProductName'],
                 'quantity' => $quantity,
                 'price' => $unitPrice,
-                'taxId' => $article['mainDetail']['taxId'],
+                'taxId' => $article['data']['tax']['id'],
             ];
     
             // Store the last valid taxId for potential use in shipping discount
