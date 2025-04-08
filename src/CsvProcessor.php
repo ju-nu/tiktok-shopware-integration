@@ -39,52 +39,50 @@ class CsvProcessor
             return;
         }
     
-        // Remove BOM and trim headers
-        $headers[0] = str_replace("\ufeff", '', $headers[0]);
-        $headers = array_map('trim', $headers);
-        $this->logger->debug("Headers: " . implode(', ', $headers));
+        // Log raw headers for debugging
+        $this->logger->debug("Raw headers: " . implode(', ', $headers));
     
-        // Check if 'Order ID' is in headers
-        if (!in_array('Order ID', $headers)) {
-            $this->logger->error("Header 'Order ID' not found in: " . implode(', ', $headers));
+        // Clean headers
+        $headers[0] = str_replace("\ufeff", '', $headers[0]); // Remove BOM
+        $headers = array_map('trim', $headers); // Trim whitespace
+    
+        // Log cleaned headers
+        $this->logger->debug("Cleaned headers: " . implode(', ', $headers));
+    
+        // Check for 'Order ID' explicitly as the first header
+        if ($headers[0] !== 'Order ID') {
+            $this->logger->error("Expected 'Order ID' as first header, found: '{$headers[0]}'");
             fclose($handle);
             return;
         }
     
         // Process rows
         while (($data = fgetcsv($handle, 0, ',')) !== false) {
-            // Trim data to handle extra spaces
             $data = array_map('trim', $data);
     
-            // Validate column count
             if (count($data) !== count($headers)) {
                 $this->logger->warning("Row column count (" . count($data) . ") does not match header count (" . count($headers) . "): " . implode(', ', $data));
                 continue;
             }
     
-            // Combine headers and data
             $row = array_combine($headers, $data);
             if ($row === false) {
                 $this->logger->error("Failed to combine headers with data: " . implode(', ', $data));
                 continue;
             }
     
-            // Ensure 'Order ID' exists and is not empty
             if (!isset($row['Order ID']) || empty(trim($row['Order ID']))) {
                 $this->logger->error("Missing or empty 'Order ID' in row: " . implode(', ', $data));
                 continue;
             }
     
-            // Use trimmed Order ID as key
             $orderId = trim($row['Order ID']);
             $orders[$orderId][] = $row;
         }
         fclose($handle);
     
-        // Debug the final $orders structure
         $this->logger->debug("Orders array: " . json_encode(array_map(fn($rows) => count($rows), $orders), JSON_PRETTY_PRINT));
     
-        // Process each order
         foreach ($orders as $orderId => $orderRows) {
             $this->createShopwareOrder($orderId, $orderRows);
         }
