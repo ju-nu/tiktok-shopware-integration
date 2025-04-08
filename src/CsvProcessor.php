@@ -283,6 +283,8 @@ class CsvProcessor
         $orderData['invoiceShippingNet'] = round($invoiceShipping / 1.00, 2); // Shipping net = gross since tax-free discount
     
         try {
+            var_dump($orderData);
+            die();
             $this->logger->debug("Order data being sent: " . json_encode($orderData));
             $response = $this->shopwareClient->createOrder($orderData);
             $orderIdResponse = $response['data']['id'] ?? 'unknown'; // Safely access nested id
