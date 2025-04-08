@@ -136,16 +136,23 @@ class CsvProcessor
         $invoiceShipping = (float)str_replace(' EUR', '', $firstRow['ShippingFeeAfterDiscount']);
         $invoiceAmount = (float)str_replace(' EUR', '', $firstRow['OrderAmount']);
     
+        // Get shopId from config, default to 1
+        $shopId = $this->shopwareClient->getConfig()['shop_id'] ?? 1;
+    
         $orderData = [
             'number' => $orderId,
-            'shopId' => 1,
             'customerId' => $customerId,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
+            'shopId' => $shopId, // Added shopId
             'orderStatusId' => 5, // "Zur Lieferung bereit"
             'paymentStatusId' => 12, // "Komplett bezahlt"
             'invoiceAmount' => $invoiceAmount,
+            'invoiceAmountNet' => 0, // Placeholder, calculated below
             'invoiceShipping' => $invoiceShipping,
+            'invoiceShippingNet' => 0, // Placeholder, calculated below
+            'net' => false, // Gross pricing (includes VAT)
+            'taxFree' => false, // Not tax-exempt
             'currency' => 'EUR',
             'currencyFactor' => 1.0,
             'internalComment' => "TikTok Order ID: $orderId",
@@ -210,10 +217,10 @@ class CsvProcessor
                 'statusId' => 0, // Open
             ];
     
-            $lastTaxRate = (float)$taxRate; // Store last tax rate for shipping
+            $lastTaxRate = (float)$taxRate; // Store last tax rate for net calculations
         }
     
-        // Calculate net values
+        // Calculate net values using the last tax rate
         $taxFactor = 1 + ($lastTaxRate / 100); // e.g., 1.19 for 19% VAT
         $orderData['invoiceAmountNet'] = round($invoiceAmount / $taxFactor, 2);
         $orderData['invoiceShippingNet'] = round($invoiceShipping / $taxFactor, 2);
@@ -226,6 +233,7 @@ class CsvProcessor
             $this->logger->error("Failed to create order $orderId: " . $e->getMessage());
         }
     }
+
     private function checkExistingOrder(string $tiktokOrderId): ?array
     {
         try {
