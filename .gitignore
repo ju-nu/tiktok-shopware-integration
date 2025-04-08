@@ -1,5 +1,4 @@
-/vendor
-/.env
-/src/Logs/*
-/var/logs/*
-/var/queue/*
+.env
+vendor/
+storage/queue/*
+storage/logs/*

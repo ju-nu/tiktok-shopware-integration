@@ -1,10 +1,9 @@
-# TikTok Shopware Integration
+# TikTok Shopware Sync
 
-## Reqs
+A PHP 8.3+ application to process TikTok order CSV files and sync them with Shopware 5 asynchronously.
 
+## Requirements
 - PHP 8.3+
 - Composer
-- Supervisor
-- Apache/Nginx
-- Shopware 5 API
-
+- Supervisor (for worker management)
+- Shopware 5 instance with API access
