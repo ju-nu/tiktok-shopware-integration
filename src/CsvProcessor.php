@@ -281,9 +281,9 @@ class CsvProcessor
             'email' => $email,
             'active' => true,
             'groupKey' => $groupKey,
-            'salutation' => 'mr',
             'firstname' => $recipient['firstName'],
             'lastname' => $recipient['lastName'],
+            'salutation' => 'mr',
             'password' => bin2hex(random_bytes(8)),
             'billing' => [
                 'firstName' => $recipient['firstName'],
