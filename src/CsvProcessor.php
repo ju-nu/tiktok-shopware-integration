@@ -303,8 +303,6 @@ class CsvProcessor
     {
         try {
             $response = $this->shopwareClient->get("orders?filter[0][property]=internalComment&filter[0][expression]=LIKE&filter[0][value]=%$tiktokOrderId%");
-            var_dump($response);
-            die();
             $data = json_decode($response->getBody()->getContents(), true);
             return $data['data'][0] ?? null; // Return first match or null if not found
         } catch (\Exception $e) {
