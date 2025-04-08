@@ -302,7 +302,7 @@ class CsvProcessor
     private function checkExistingOrder(string $tiktokOrderId): ?array
     {
         try {
-            $response = $this->shopwareClient->get("orders?filter[0][property]=internalComment&filter[0][value]=TikTok Order ID: $tiktokOrderId");
+            $response = $this->shopwareClient->get("orders?filter[0][property]=internalComment&filter[0][expression]=LIKE&filter[0][value]=%$tiktokOrderId%");
             $data = json_decode($response->getBody()->getContents(), true);
             return $data['data'][0] ?? null; // Return first match or null if not found
         } catch (\Exception $e) {
