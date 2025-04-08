@@ -1,6 +1,6 @@
 {
     "name": "tiktok-shopware-integration",
-    "description": "A PHP application to process TikTok order CSVs and integrate with Shopware 5",
+    "description": "Sync TikTok order CSVs with Shopware 5",
     "require": {
         "php": "^8.3",
         "monolog/monolog": "^3.0",
