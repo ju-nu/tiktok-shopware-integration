@@ -152,6 +152,8 @@ class CsvProcessor
         // Get shopId from config, default to 1
         $shopId = $this->shopwareClient->getConfig()['shop_id'] ?? 1;
 
+        $phoneNumber = str_replace('(+49)', '0', $row['Phone#'] ?? '');
+
         $orderData = [
             'customerId' => $customerId,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
@@ -183,6 +185,7 @@ class CsvProcessor
                 'zipcode' => $firstRow['Zipcode'],
                 'city' => $firstRow['City'],
                 'countryId' => $this->shopwareClient->getConfig()['country_id'],
+                'phone' => $phoneNumber,
             ],
             'shipping' => [
                 'firstName' => $recipient['firstName'],
@@ -366,7 +369,6 @@ class CsvProcessor
         }
 
         $phoneNumber = str_replace('(+49)', '0', $row['Phone#'] ?? '');
-        var_dump($phoneNumber);
 
         // Create new guest customer if not found
         $customerData = [
@@ -386,7 +388,7 @@ class CsvProcessor
                 'zipcode' => $row['Zipcode'] ?? '00000',
                 'city' => $row['City'] ?? 'Unknown',
                 'country' => $this->shopwareClient->getConfig()['country_id'],
-                'phone' => $phoneNumber, // Add phone number
+                'phone' => $phoneNumber,
             ],
             'shipping' => [
                 'firstName' => $recipient['firstName'],
@@ -397,7 +399,6 @@ class CsvProcessor
                 'zipcode' => $row['Zipcode'] ?? '00000',
                 'city' => $row['City'] ?? 'Unknown',
                 'country' => $this->shopwareClient->getConfig()['country_id'],
-                'phone' => $phoneNumber, // Add phone number
             ],
         ];
 
