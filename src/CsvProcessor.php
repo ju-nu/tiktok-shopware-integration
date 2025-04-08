@@ -92,24 +92,24 @@ class CsvProcessor
     private function createShopwareOrder(string $orderId, array $orderRows): void
     {
         $this->logger->info("Creating order for TikTok Order ID: $orderId");
-    
+
         // Check if order already exists in Shopware by TikTok Order ID in internalComment
         $existingOrder = $this->checkExistingOrder($orderId);
         if ($existingOrder) {
             $this->logger->info("Order with TikTok ID $orderId already exists as Shopware Order ID {$existingOrder['id']}, skipping creation");
             return;
         }
-    
+
         $firstRow = $orderRows[0];
         $recipient = $this->splitRecipientName($firstRow['Recipient'] ?? 'Unknown Unknown');
-    
+
         // Create guest customer
         $customerId = $this->createGuestCustomer($firstRow);
         if (!$customerId) {
             $this->logger->error("Failed to create guest customer for order $orderId, skipping");
             return;
         }
-    
+
         // Validate required fields with defaults
         $requiredFields = [
             'OrderAmount' => '0,00 EUR',
@@ -129,6 +129,8 @@ class CsvProcessor
             'ProductName' => 'Unknown Product',
             'ShippingFeePlatformDiscount' => '0,00 EUR',
             'CreatedTime' => date('Y-m-d H:i:s'), // Default to now if missing
+            'PaidTime' => date('Y-m-d H:i:s'), // Default to now if missing
+            'Phone#' => '', // Default to empty string if missing
         ];
         foreach ($requiredFields as $key => $default) {
             if (!isset($firstRow[$key]) || empty(trim($firstRow[$key]))) {
@@ -136,18 +138,18 @@ class CsvProcessor
                 $firstRow[$key] = $default;
             }
         }
-    
+
         // Use OriginalShippingFee as invoiceShipping
         $invoiceShipping = (float)str_replace(' EUR', '', $firstRow['OriginalShippingFee']);
         $invoiceAmount = (float)str_replace(' EUR', '', $firstRow['OrderAmount']);
-    
+
         // Convert CreatedTime and PaidTime to Shopware's expected format (Y-m-d H:i:s)
         $orderTime = date('Y-m-d H:i:s', strtotime($firstRow['CreatedTime']));
         $clearedDate = date('Y-m-d H:i:s', strtotime($firstRow['PaidTime']));
-    
+
         // Get shopId from config, default to 1
         $shopId = $this->shopwareClient->getConfig()['shop_id'] ?? 1;
-    
+
         $orderData = [
             'customerId' => $customerId,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
@@ -159,8 +161,8 @@ class CsvProcessor
             'invoiceAmountNet' => 0, // Placeholder, calculated below
             'invoiceShipping' => $invoiceShipping,
             'invoiceShippingNet' => 0, // Placeholder, calculated below
-            'net' => 0, // Kept as 0 per your request
-            'taxFree' => 0, // Kept as 0 per your request
+            'net' => 0, // Gross pricing
+            'taxFree' => 0, // Not tax-exempt
             'languageIso' => 1,
             'referer' => 'JUNU Importer',
             'currency' => 'EUR',
@@ -188,28 +190,28 @@ class CsvProcessor
             ],
             'details' => [],
         ];
-    
+
         $lastTaxRate = null;
-    
+
         foreach ($orderRows as $row) {
             foreach ($requiredFields as $key => $default) {
                 if (!isset($row[$key]) || empty(trim($row[$key]))) {
                     $row[$key] = $default;
                 }
             }
-    
+
             $sellerSku = $row['SellerSKU'];
             if (empty($sellerSku)) {
                 $this->logger->error("Skipping item in order $orderId - missing 'SellerSKU'");
                 continue;
             }
-    
+
             $article = $this->shopwareClient->getArticleByNumber($sellerSku);
             if (!$article) {
                 $this->logger->error("Skipping item with SKU $sellerSku in order $orderId - not found in Shopware");
                 continue;
             }
-    
+
             $taxRate = $article['tax']['tax'] ?? null;
             $taxId = $article['tax']['id'] ?? null;
             if (!$taxRate || !$taxId) {
@@ -217,7 +219,7 @@ class CsvProcessor
                 $taxRate = 7.00; // Default to 7% VAT
                 $taxId = 4; // Default to tax ID 4
             }
-    
+
             $unitPrice = (float)str_replace(' EUR', '', $row['SKUUnitOriginalPrice']); // Artikelpreis
             $quantity = (int)$row['Quantity'];
             $orderData['details'][] = [
@@ -230,7 +232,7 @@ class CsvProcessor
                 'taxRate' => (float)$taxRate,
                 'statusId' => 0, // Open
             ];
-    
+
             // Add Seller Discount as a separate line item
             $sellerDiscount = (float)str_replace(' EUR', '', $row['SKUSellerDiscount']);
             if ($sellerDiscount != 0) {
@@ -246,7 +248,7 @@ class CsvProcessor
                     'statusId' => 0, // Open
                 ];
             }
-    
+
             // Add Platform Discount as a separate line item
             $platformDiscount = (float)str_replace(' EUR', '', $row['SKUPlatformDiscount']);
             if ($platformDiscount != 0) {
@@ -262,10 +264,10 @@ class CsvProcessor
                     'statusId' => 0, // Open
                 ];
             }
-    
+
             $lastTaxRate = (float)$taxRate; // Store last tax rate for net calculations
         }
-    
+
         // Add Shipping Fee Platform Discount as a tax-free line item
         $shippingFeePlatformDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']);
         if ($shippingFeePlatformDiscount != 0) {
@@ -281,12 +283,12 @@ class CsvProcessor
                 'statusId' => 0, // Open
             ];
         }
-    
+
         // Calculate net values using the last tax rate (for articles, not shipping discount)
         $taxFactor = 1 + ($lastTaxRate / 100); // e.g., 1.07 for 7% VAT
         $orderData['invoiceAmountNet'] = round($invoiceAmount / $taxFactor, 2);
         $orderData['invoiceShippingNet'] = round($invoiceShipping / 1.00, 2); // Shipping net = gross since tax-free discount
-    
+
         try {
             $this->logger->debug("Order data being sent: " . json_encode($orderData));
             $response = $this->shopwareClient->createOrder($orderData);
@@ -358,6 +360,7 @@ class CsvProcessor
                 'zipcode' => $row['Zipcode'] ?? '00000',
                 'city' => $row['City'] ?? 'Unknown',
                 'country' => $this->shopwareClient->getConfig()['country_id'],
+                'phone' => $row['Phone#'] ?? '', // Add phone number
             ],
             'shipping' => [
                 'firstName' => $recipient['firstName'],
@@ -368,6 +371,7 @@ class CsvProcessor
                 'zipcode' => $row['Zipcode'] ?? '00000',
                 'city' => $row['City'] ?? 'Unknown',
                 'country' => $this->shopwareClient->getConfig()['country_id'],
+                'phone' => $row['Phone#'] ?? '', // Add phone number
             ],
         ];
 
@@ -381,7 +385,6 @@ class CsvProcessor
             return null;
         }
     }
-
 
     private function splitRecipientName(string $fullName): array
     {
