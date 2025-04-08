@@ -158,6 +158,7 @@ class CsvProcessor
             'taxFree' => 0, // Not tax-exempt
             'currency' => 'EUR',
             'currencyFactor' => 1.0,
+            'languageIso' => 1,
             'referer' => 'JUNU Importer',
             'orderTime' => $orderTime, // Added Created Time as orderTime
             'internalComment' => "TikTok Order ID: $orderId",
