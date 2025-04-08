@@ -32,16 +32,18 @@ class ShopwareClient
     {
         return $this->retryRequest(function () use ($articleNumber) {
             try {
-                $response = $this->client->get("articles?filter[0][property]=number&filter[0][value]=$articleNumber");
+                $response = $this->client->request('GET', "articles/$articleNumber", [
+                    'query' => ['useNumberAsId' => 'true'],
+                ]);
                 $data = json_decode($response->getBody()->getContents(), true);
-                return $data['data'][0] ?? null;
+                return $data['data'] ?? null; // Direct endpoint returns single article in 'data'
             } catch (RequestException $e) {
                 $statusCode = $e->hasResponse() ? $e->getResponse()->getStatusCode() : 500;
                 $this->logger->warning("Failed to fetch article $articleNumber: " . $e->getMessage() . " (Status: $statusCode)");
                 if ($statusCode === 404) {
-                    return null; // Article not found, return null
+                    return null; // Article not found
                 }
-                throw $e; // Rethrow other errors for retry logic
+                throw $e; // Rethrow for retry logic
             }
         }, "Fetching article $articleNumber");
     }
@@ -71,7 +73,7 @@ class ShopwareClient
                     $this->logger->warning("$action failed (attempt $attempts/$maxAttempts): " . $e->getMessage() . ". Retrying in $wait ms.");
                     usleep($wait * 1000);
                 } else {
-                    throw $e; // Non-retryable error (e.g., 404) will be caught in caller
+                    throw $e; // Non-retryable error (e.g., 404) handled in caller
                 }
             }
         }
