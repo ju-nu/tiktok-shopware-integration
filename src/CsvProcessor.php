@@ -153,6 +153,7 @@ class CsvProcessor
             'invoiceShippingNet' => 0, // Placeholder, calculated below
             'net' => 0, // Gross pricing (includes VAT)
             'taxFree' => 0, // Not tax-exempt
+            'languageIso' => 1,
             'currency' => 'EUR',
             'currencyFactor' => 1.0,
             'internalComment' => "TikTok Order ID: $orderId",
