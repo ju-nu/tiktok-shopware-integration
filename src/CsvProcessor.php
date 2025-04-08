@@ -74,7 +74,7 @@ class CsvProcessor
                 continue;
             }
 
-            $orderId = trim($row['OrderID']);
+            $orderId = trim(preg_replace('/[\p{C}\s]+/u', '', $row['OrderID']));
             $orders[$orderId][] = $row;
         }
         fclose($handle);
@@ -169,7 +169,10 @@ class CsvProcessor
             'currencyFactor' => 1.0,
             'orderTime' => $orderTime,
             'clearedDate' => $clearedDate,
-            'internalComment' => "TikTok ID: $orderId",
+            'internalComment' => "TikTok Bestellung-ID: $orderId",
+            'attribute' => [
+                'tiktokOrderId' => $orderId,
+            ],
             'billing' => [
                 'firstName' => $recipient['firstName'],
                 'lastName' => $recipient['lastName'],
@@ -301,17 +304,31 @@ class CsvProcessor
 
     private function checkExistingOrder(string $tiktokOrderId): ?array
     {
-        var_dump($tiktokOrderId);
+        $this->logger->debug("Checking for existing TikTok order ID: '$tiktokOrderId'");
+
         $orderId = trim(preg_replace('/[\p{C}\s]+/u', '', $tiktokOrderId));
-        var_dump($orderId);
+
         try {
-            $escapedId = addcslashes($orderId, '%_'); // Escape LIKE wildcards
-            $response = $this->shopwareClient->get("orders?filter[0][property]=internalComment&filter[0][expression]=LIKE&filter[0][value]=$escapedId");
-            $data = json_decode($response->getBody()->getContents(), true);
-            return $data['data'][0] ?? null; // Return first match or null if not found
+            $response = $this->shopwareClient->get('orders', [
+                'query' => [
+                    'filter' => [
+                        [
+                            'property' => 'attribute.tiktokOrderId',
+                            'expression' => '=',
+                            'value' => $orderId,
+                        ],
+                    ],
+                ],
+            ]);
+
+            $body = $response->getBody()->getContents();
+            $this->logger->debug("Shopware order search response for TikTok ID $orderId: $body");
+
+            $data = json_decode($body, true);
+            return $data['data'][0] ?? null;
         } catch (\Exception $e) {
             $this->logger->warning("Failed to check existing order for TikTok ID $orderId: " . $e->getMessage());
-            return null; // Assume not found if check fails
+            return null;
         }
     }
 
