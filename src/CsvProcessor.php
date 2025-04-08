@@ -39,19 +39,24 @@ class CsvProcessor
             return;
         }
     
-        // Log raw headers for debugging
+        // Log raw headers
         $this->logger->debug("Raw headers: " . implode(', ', $headers));
+        $this->logger->debug("Raw first header bytes: " . bin2hex($headers[0]));
     
         // Clean headers
-        $headers[0] = str_replace("\ufeff", '', $headers[0]); // Remove BOM
-        $headers = array_map('trim', $headers); // Trim whitespace
+        $headers[0] = str_replace("\ufeff", '', $headers[0]); // Remove UTF-8 BOM
+        $headers = array_map(function ($header) {
+            // Remove all whitespace and control characters, normalize to ASCII
+            return preg_replace('/[\p{C}\s]+/u', '', trim($header));
+        }, $headers);
     
         // Log cleaned headers
         $this->logger->debug("Cleaned headers: " . implode(', ', $headers));
+        $this->logger->debug("Cleaned first header bytes: " . bin2hex($headers[0]));
     
-        // Check for 'Order ID' explicitly as the first header
-        if ($headers[0] !== 'Order ID') {
-            $this->logger->error("Expected 'Order ID' as first header, found: '{$headers[0]}'");
+        // Check for 'Order ID'
+        if ($headers[0] !== 'OrderID') {
+            $this->logger->error("Expected 'OrderID' as first header, found: '{$headers[0]}'");
             fclose($handle);
             return;
         }
@@ -71,12 +76,12 @@ class CsvProcessor
                 continue;
             }
     
-            if (!isset($row['Order ID']) || empty(trim($row['Order ID']))) {
-                $this->logger->error("Missing or empty 'Order ID' in row: " . implode(', ', $data));
+            if (!isset($row['OrderID']) || empty(trim($row['OrderID']))) {
+                $this->logger->error("Missing or empty 'OrderID' in row: " . implode(', ', $data));
                 continue;
             }
     
-            $orderId = trim($row['Order ID']);
+            $orderId = trim($row['OrderID']);
             $orders[$orderId][] = $row;
         }
         fclose($handle);
@@ -90,7 +95,6 @@ class CsvProcessor
         unlink($filePath);
         $this->logger->info("Finished processing file: $filePath");
     }
-
     private function createShopwareOrder(string $orderId, array $orderRows): void
     {
         $this->logger->info("Creating order for TikTok Order ID: $orderId");
