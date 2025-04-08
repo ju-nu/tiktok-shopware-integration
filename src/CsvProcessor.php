@@ -292,7 +292,7 @@ class CsvProcessor
                 'streetNumber' => $row['HouseNameorNumber'] ?? '',
                 'zipcode' => $row['Zipcode'] ?? '00000',
                 'city' => $row['City'] ?? 'Unknown',
-                'countryId' => $this->shopwareClient->getConfig()['country_id'],
+                'country' => $this->shopwareClient->getConfig()['country_id'],
             ],
             'shipping' => [
                 'firstName' => $recipient['firstName'],
@@ -301,7 +301,7 @@ class CsvProcessor
                 'streetNumber' => $row['HouseNameorNumber'] ?? '',
                 'zipcode' => $row['Zipcode'] ?? '00000',
                 'city' => $row['City'] ?? 'Unknown',
-                'countryId' => $this->shopwareClient->getConfig()['country_id'],
+                'country' => $this->shopwareClient->getConfig()['country_id'],
             ],
         ];
     
