@@ -92,24 +92,24 @@ class CsvProcessor
     private function createShopwareOrder(string $orderId, array $orderRows): void
     {
         $this->logger->info("Creating order for TikTok Order ID: $orderId");
-
+    
         // Check if order already exists in Shopware by TikTok Order ID in internalComment
         $existingOrder = $this->checkExistingOrder($orderId);
         if ($existingOrder) {
             $this->logger->info("Order with TikTok ID $orderId already exists as Shopware Order ID {$existingOrder['id']}, skipping creation");
             return;
         }
-
+    
         $firstRow = $orderRows[0];
         $recipient = $this->splitRecipientName($firstRow['Recipient'] ?? 'Unknown Unknown');
-
+    
         // Create guest customer
         $customerId = $this->createGuestCustomer($firstRow);
         if (!$customerId) {
             $this->logger->error("Failed to create guest customer for order $orderId, skipping");
             return;
         }
-
+    
         // Validate required fields with defaults
         $requiredFields = [
             'OrderAmount' => '0,00 EUR',
@@ -131,25 +131,25 @@ class CsvProcessor
                 $firstRow[$key] = $default;
             }
         }
-
+    
         // Calculate invoiceShipping
         $originalShipping = (float)str_replace(' EUR', '', $firstRow['OriginalShippingFee']);
         $shippingDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']) +
-            (float)str_replace(' EUR', '', $firstRow['ShippingFeeSellerDiscount'] ?? '0,00 EUR');
+                           (float)str_replace(' EUR', '', $firstRow['ShippingFeeSellerDiscount'] ?? '0,00 EUR');
         $invoiceShipping = max(0, $originalShipping - $shippingDiscount);
-
+    
         $orderData = [
             'number' => $orderId,
             'customerId' => $customerId,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
-            'orderStatusId' => 5,
-            'paymentStatusId' => 12,
+            'orderStatusId' => 5, // "Zur Lieferung bereit"
+            'paymentStatusId' => 12, // "Komplett bezahlt"
             'invoiceAmount' => (float)str_replace(' EUR', '', $firstRow['OrderAmount']),
             'invoiceShipping' => $invoiceShipping,
             'currency' => 'EUR',
             'currencyFactor' => 1.0,
-            'internalComment' => "TikTok Order ID: $orderId", // Store TikTok Order ID here
+            'internalComment' => "TikTok Order ID: $orderId",
             'billing' => [
                 'firstName' => $recipient['firstName'],
                 'lastName' => $recipient['lastName'],
@@ -170,65 +170,67 @@ class CsvProcessor
             ],
             'details' => [],
         ];
-
-        $lastTaxId = null;
-
+    
+        $lastTaxRate = null;
+    
         foreach ($orderRows as $row) {
             foreach ($requiredFields as $key => $default) {
                 if (!isset($row[$key]) || empty(trim($row[$key]))) {
                     $row[$key] = $default;
                 }
             }
-
+    
             $sellerSku = $row['SellerSKU'];
             if (empty($sellerSku)) {
                 $this->logger->error("Skipping item in order $orderId - missing 'SellerSKU'");
                 continue;
             }
-
+    
             $article = $this->shopwareClient->getArticleByNumber($sellerSku);
             if (!$article) {
                 $this->logger->error("Skipping item with SKU $sellerSku in order $orderId - not found in Shopware");
                 continue;
             }
-
-            $taxId = $article['tax']['id'] ?? null;
-            if (!$taxId) {
-                $this->logger->warning("No tax ID found for SKU $sellerSku in order $orderId, using fallback tax ID 1");
-                $taxId = 1;
+    
+            $taxRate = $article['tax']['tax'] ?? null;
+            if (!$taxRate) {
+                $this->logger->warning("No tax rate found for SKU $sellerSku in order $orderId, using fallback tax rate 7.00");
+                $taxRate = 7.00; // Default to 19% VAT
             }
-
+    
             $unitPrice = (float)str_replace(' EUR', '', $row['SKUUnitOriginalPrice']);
             $quantity = (int)$row['Quantity'];
             $orderData['details'][] = [
-                'articleId' => $article['id'], // Direct 'id' since no 'data' wrapper
+                'articleId' => $article['id'],
                 'articleNumber' => $sellerSku,
-                'name' => $row['ProductName'],
+                'articleName' => $row['ProductName'],
                 'quantity' => $quantity,
                 'price' => $unitPrice,
-                'taxId' => $taxId,
-                'statusId' => 0, // "Zur Lieferung bereit"
+                'taxId' => $article['tax']['id'] ?? 4,
+                'taxRate' => (float)$taxRate, // Add taxRate from article
+                'statusId' => 0, // Open
             ];
-
-            $lastTaxId = $taxId;
+    
+            $lastTaxRate = $taxRate;
         }
-
+    
         $shippingFeeDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']);
         if ($shippingFeeDiscount > 0) {
             $orderData['details'][] = [
                 'articleNumber' => 'SHIPPING_DISCOUNT',
-                'name' => 'Shipping Discount (TikTok)',
+                'articleName' => 'Shipping Discount (TikTok)', // Ensure valid name
                 'quantity' => 1,
                 'price' => -$shippingFeeDiscount,
-                'taxId' => $lastTaxId ?? 1,
-                'statusId' => 0, // "Zur Lieferung bereit"
+                'taxId' => 5, // Use last tax ID or fallback
+                'taxRate' => 0, // Use last tax rate or fallback
+                'statusId' => 0, // Open
             ];
         }
-
+    
         try {
+            $this->logger->debug("Order data being sent: " . json_encode($orderData));
             $response = $this->shopwareClient->createOrder($orderData);
             $this->logger->info("Order created successfully: Shopware Order ID {$response['id']}");
-            die();
         } catch (\Exception $e) {
             $this->logger->error("Failed to create order $orderId: " . $e->getMessage());
         }
