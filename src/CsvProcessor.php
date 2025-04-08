@@ -114,7 +114,7 @@ class CsvProcessor
         $requiredFields = [
             'OrderAmount' => '0,00 EUR',
             'ShippingFeeAfterDiscount' => '0,00 EUR',
-            'OriginalShippingFee' => '0,00 EUR', // Still included for completeness, though not used here
+            'OriginalShippingFee' => '0,00 EUR',
             'StreetName' => 'Unknown',
             'HouseNameorNumber' => '',
             'Zipcode' => '00000',
@@ -134,16 +134,16 @@ class CsvProcessor
     
         // Use ShippingFeeAfterDiscount directly as invoiceShipping
         $invoiceShipping = (float)str_replace(' EUR', '', $firstRow['ShippingFeeAfterDiscount']);
+        $invoiceAmount = (float)str_replace(' EUR', '', $firstRow['OrderAmount']);
     
         $orderData = [
             'number' => $orderId,
-            'shopId' => 1,
             'customerId' => $customerId,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
             'orderStatusId' => 5, // "Zur Lieferung bereit"
             'paymentStatusId' => 12, // "Komplett bezahlt"
-            'invoiceAmount' => (float)str_replace(' EUR', '', $firstRow['OrderAmount']),
+            'invoiceAmount' => $invoiceAmount,
             'invoiceShipping' => $invoiceShipping,
             'currency' => 'EUR',
             'currencyFactor' => 1.0,
@@ -169,6 +169,8 @@ class CsvProcessor
             'details' => [],
         ];
     
+        $lastTaxRate = null;
+    
         foreach ($orderRows as $row) {
             foreach ($requiredFields as $key => $default) {
                 if (!isset($row[$key]) || empty(trim($row[$key]))) {
@@ -190,8 +192,8 @@ class CsvProcessor
     
             $taxRate = $article['tax']['tax'] ?? null;
             if (!$taxRate) {
-                $this->logger->warning("No tax rate found for SKU $sellerSku in order $orderId, using fallback tax rate 7.00");
-                $taxRate = 7.00; // Default to 19% VAT
+                $this->logger->warning("No tax rate found for SKU $sellerSku in order $orderId, using fallback tax rate 19.00");
+                $taxRate = 19.00; // Default to 19% VAT
             }
     
             $unitPrice = (float)str_replace(' EUR', '', $row['SKUUnitOriginalPrice']);
@@ -199,14 +201,21 @@ class CsvProcessor
             $orderData['details'][] = [
                 'articleId' => $article['id'],
                 'articleNumber' => $sellerSku,
-                'articleName' => $row['ProductName'], // Changed from 'name' to 'articleName'
+                'articleName' => $row['ProductName'],
                 'quantity' => $quantity,
                 'price' => $unitPrice,
-                'taxId' => $article['tax']['id'] ?? 4,
+                'taxId' => $article['tax']['id'] ?? 1,
                 'taxRate' => (float)$taxRate,
                 'statusId' => 0, // Open
             ];
+    
+            $lastTaxRate = (float)$taxRate; // Store last tax rate for shipping
         }
+    
+        // Calculate net values
+        $taxFactor = 1 + ($lastTaxRate / 100); // e.g., 1.19 for 19% VAT
+        $orderData['invoiceAmountNet'] = round($invoiceAmount / $taxFactor, 2);
+        $orderData['invoiceShippingNet'] = round($invoiceShipping / $taxFactor, 2);
     
         try {
             $this->logger->debug("Order data being sent: " . json_encode($orderData));
@@ -216,7 +225,6 @@ class CsvProcessor
             $this->logger->error("Failed to create order $orderId: " . $e->getMessage());
         }
     }
-
     private function checkExistingOrder(string $tiktokOrderId): ?array
     {
         try {
@@ -234,7 +242,7 @@ class CsvProcessor
         $recipient = $this->splitRecipientName($row['Recipient'] ?? 'Unknown Unknown');
         $email = $row['Email'] ?? 'guest_' . uniqid() . '@example.com';
         $groupKey = 'TK';
-    
+
         // Check if customer exists
         try {
             $checkResponse = $this->shopwareClient->get('customers', [
@@ -245,7 +253,7 @@ class CsvProcessor
                     ],
                 ],
             ]);
-    
+
             $existing = json_decode($checkResponse->getBody()->getContents(), true);
             if (isset($existing['data']) && !empty($existing['data'])) {
                 foreach ($existing['data'] as $customer) {
@@ -259,7 +267,7 @@ class CsvProcessor
         } catch (\Exception $e) {
             $this->logger->warning("Failed to check for existing customer for $email: " . $e->getMessage());
         }
-    
+
         // Create new guest customer if not found
         $customerData = [
             'email' => $email,
@@ -290,7 +298,7 @@ class CsvProcessor
                 'country' => $this->shopwareClient->getConfig()['country_id'],
             ],
         ];
-    
+
         try {
             $response = $this->shopwareClient->post('customers', ['json' => $customerData]);
             $data = json_decode($response->getBody()->getContents(), true);
