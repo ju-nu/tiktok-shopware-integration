@@ -132,6 +132,3 @@ Die `.env`-Datei enthält:
 - **Steuersätze:** Standard 7% (`taxId=4`) für Artikel, 0% (`taxId=5`) für Versandrabatte.
 - **Zeitformat:** `CreatedTime` und `PaidTime` werden in `Y-m-d H:i:s` umgewandelt.
 - **Telefonnummern:** `(+49)` wird durch `0` ersetzt (z.B. `(+49)1746688752` → `01746688752`).
-
-## Kontakt
-Entwickelt von **JUNU Marketing Group** ([ju.nu](https://ju.nu)) für **Kräuterland Natur-Ölmühle GmbH** ([www.kraeuterland.de](https://www.kraeuterland.de)). Bei Fragen wenden Sie sich an JUNU Marketing Group.
