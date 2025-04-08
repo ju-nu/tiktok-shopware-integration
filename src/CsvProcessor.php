@@ -18,32 +18,65 @@ class CsvProcessor
     public function processFile(string $filePath): void
     {
         $this->logger->info("Processing file: $filePath");
-
+    
         if (!file_exists($filePath)) {
             $this->logger->error("File not found: $filePath");
             return;
         }
-
+    
         $orders = [];
         $handle = fopen($filePath, 'r');
-        $headers = fgetcsv($handle, 0, ','); // Get headers
-        $headers[0] = str_replace("\ufeff", '', $headers[0]); // Remove BOM from "Order ID"
-
+        if ($handle === false) {
+            $this->logger->error("Failed to open file: $filePath");
+            return;
+        }
+    
+        $headers = fgetcsv($handle, 0, ',');
+        if ($headers === false || empty($headers)) {
+            $this->logger->error("No headers found in file: $filePath");
+            fclose($handle);
+            return;
+        }
+    
+        $headers[0] = str_replace("\ufeff", '', $headers[0]); // Remove BOM
+        $this->logger->debug("Headers: " . implode(', ', $headers));
+    
+        if (!in_array('Order ID', $headers)) {
+            $this->logger->error("Header 'Order ID' not found in: " . implode(', ', $headers));
+            fclose($handle);
+            return;
+        }
+    
         while (($data = fgetcsv($handle, 0, ',')) !== false) {
+            if (count($data) !== count($headers)) {
+                $this->logger->warning("Row column count (" . count($data) . ") does not match header count (" . count($headers) . "): " . implode(', ', $data));
+                continue;
+            }
+    
             $row = array_combine($headers, $data);
-            $orderId = $row['Order ID'];
+            if ($row === false) {
+                $this->logger->error("Failed to combine headers with data: " . implode(', ', $data));
+                continue;
+            }
+    
+            $orderId = $row['Order ID'] ?? '';
+            if (empty($orderId)) {
+                $this->logger->warning("Empty or missing 'Order ID' in row: " . implode(', ', $data));
+                continue;
+            }
+    
             $orders[$orderId][] = $row;
         }
         fclose($handle);
-
-        var_dump($orders);
+    
+        var_dump($orders); // Keep your debugging for now
         die();
-
+    
         foreach ($orders as $orderId => $orderRows) {
             $this->createShopwareOrder($orderId, $orderRows);
         }
-
-        unlink($filePath); // Remove processed file
+    
+        unlink($filePath);
         $this->logger->info("Finished processing file: $filePath");
     }
 
