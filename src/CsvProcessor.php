@@ -91,8 +91,6 @@ class CsvProcessor
 
     private function createShopwareOrder(string $orderId, array $orderRows): void
     {
-        var_dump($orderRows);
-        die();
         $this->logger->info("Creating order for TikTok Order ID: $orderId");
 
         // Check if order already exists in Shopware by TikTok Order ID in internalComment
