@@ -135,7 +135,7 @@ class CsvProcessor
         // Calculate invoiceShipping
         $originalShipping = (float)str_replace(' EUR', '', $firstRow['OriginalShippingFee']);
         $shippingDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']) +
-                           (float)str_replace(' EUR', '', $firstRow['ShippingFeeSellerDiscount'] ?? '0,00 EUR');
+            (float)str_replace(' EUR', '', $firstRow['ShippingFeeSellerDiscount'] ?? '0,00 EUR');
         $invoiceShipping = max(0, $originalShipping - $shippingDiscount);
 
         $orderData = [
@@ -249,35 +249,54 @@ class CsvProcessor
     {
         $recipient = $this->splitRecipientName($row['Recipient'] ?? 'Unknown Unknown');
         $email = $row['Email'] ?? 'guest_' . uniqid() . '@example.com';
+        $groupKey = 'TK';
+
+        try {
+            $checkResponse = $this->shopwareClient->get('customers', [
+                'query' => [
+                    'filter' => [
+                        ['property' => 'email', 'value' => $email],
+                        ['property' => 'groupKey', 'value' => $groupKey]
+                    ]
+                ]
+            ]);
+
+            $existing = json_decode($checkResponse->getBody()->getContents(), true);
+
+            if (!empty($existing['data']) && isset($existing['data'][0]['id'])) {
+                $existingId = $existing['data'][0]['id'];
+                $this->logger->info("Existing customer found for email $email: ID $existingId");
+                return $existingId;
+            }
+        } catch (\Exception $e) {
+            $this->logger->warning("Failed to check for existing customer for $email: " . $e->getMessage());
+        }
 
         $customerData = [
             'email' => $email,
             'active' => true,
-            'groupId' => 1, // Default customer group (e.g., "EK")
-            'salutation' => 'not_specified',
+            'groupKey' => $groupKey,
+            'salutation' => 'mr',
             'firstname' => $recipient['firstName'],
             'lastname' => $recipient['lastName'],
+            'password' => bin2hex(random_bytes(8)),
             'billing' => [
-                [
-                    'firstName' => $recipient['firstName'],
-                    'lastName' => $recipient['lastName'],
-                    'street' => $row['StreetName'] ?? 'Unknown',
-                    'streetNumber' => $row['HouseNameorNumber'] ?? '',
-                    'zipcode' => $row['Zipcode'] ?? '00000',
-                    'city' => $row['City'] ?? 'Unknown',
-                    'countryId' => $this->shopwareClient->getConfig()['country_id'],
-                ],
+                'firstName' => $recipient['firstName'],
+                'lastName' => $recipient['lastName'],
+                'street' => $row['StreetName'] ?? 'Unknown',
+                'streetNumber' => $row['HouseNameorNumber'] ?? '',
+                'zipcode' => $row['Zipcode'] ?? '00000',
+                'city' => $row['City'] ?? 'Unknown',
+                'countryId' => $this->shopwareClient->getConfig()['country_id'],
             ],
             'shipping' => [
-                [
-                    'firstName' => $recipient['firstName'],
-                    'lastName' => $recipient['lastName'],
-                    'street' => $row['StreetName'] ?? 'Unknown',
-                    'streetNumber' => $row['HouseNameorNumber'] ?? '',
-                    'zipcode' => $row['Zipcode'] ?? '00000',
-                    'city' => $row['City'] ?? 'Unknown',
-                    'countryId' => $this->shopwareClient->getConfig()['country_id'],
-                ],
+                'firstName' => $recipient['firstName'],
+                'lastName' => $recipient['lastName'],
+                'street' => $row['StreetName'] ?? 'Unknown',
+                'streetNumber' => $row['HouseNameorNumber'] ?? '',
+                'zipcode' => $row['Zipcode'] ?? '00000',
+                'city' => $row['City'] ?? 'Unknown',
+                'countryId' => $this->shopwareClient->getConfig()['country_id'],
             ],
         ];
 
@@ -291,6 +310,7 @@ class CsvProcessor
             return null;
         }
     }
+
 
     private function splitRecipientName(string $fullName): array
     {
