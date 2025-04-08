@@ -301,12 +301,13 @@ class CsvProcessor
 
     private function checkExistingOrder(string $tiktokOrderId): ?array
     {
+        $orderId = trim(preg_replace('/[\p{C}\s]+/u', '', $tiktokOrderId));
         try {
-            $response = $this->shopwareClient->get("orders?filter[0][property]=internalComment&filter[0][expression]=LIKE&filter[0][value]=%$tiktokOrderId%");
+            $response = $this->shopwareClient->get("orders?filter[0][property]=internalComment&filter[0][expression]=LIKE&filter[0][value]=%$orderId%");
             $data = json_decode($response->getBody()->getContents(), true);
             return $data['data'][0] ?? null; // Return first match or null if not found
         } catch (\Exception $e) {
-            $this->logger->warning("Failed to check existing order for TikTok ID $tiktokOrderId: " . $e->getMessage());
+            $this->logger->warning("Failed to check existing order for TikTok ID $orderId: " . $e->getMessage());
             return null; // Assume not found if check fails
         }
     }
