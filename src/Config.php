@@ -4,13 +4,16 @@ namespace TikTokShopwareSync;
 
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use Monolog\Handler\RotatingFileHandler;
 
 class Config
 {
     public function getLogger(): Logger
     {
         $logger = new Logger('tiktok_shopware_sync');
-        $logger->pushHandler(new StreamHandler($_ENV['APP_LOG_PATH'], Logger::DEBUG, true, null, 'w'));
+        // Keep up to 7 daily log files by default
+        $logger->pushHandler(new RotatingFileHandler($_ENV['APP_LOG_PATH'], 7, Logger::DEBUG));
+        
         return $logger;
     }
 
