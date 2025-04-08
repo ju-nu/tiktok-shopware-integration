@@ -170,7 +170,7 @@ class CsvProcessor
                 $this->logger->error("Skipping item in order $orderId - missing 'SellerSKU'");
                 continue;
             }
-            var_dump($sellerSku);
+            var_dump($this->shopwareClient->getArticleByNumber($sellerSku));
             $article = $this->shopwareClient->getArticleByNumber($sellerSku);
             
             die();
