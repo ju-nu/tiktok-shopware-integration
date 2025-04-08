@@ -143,7 +143,7 @@ class CsvProcessor
             'customerId' => $customerId,
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
-            'orderStatusId' => 5,
+            'orderStatusId' => 1,
             'paymentStatusId' => 12,
             'invoiceAmount' => (float)str_replace(' EUR', '', $firstRow['OrderAmount']),
             'invoiceShipping' => $invoiceShipping,
