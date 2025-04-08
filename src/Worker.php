@@ -2,6 +2,8 @@
 
 namespace TikTokShopwareSync;
 
+require_once __DIR__ . '/../vendor/autoload.php';
+
 use Dotenv\Dotenv; // Import the correct Dotenv class
 use Psr\Log\LoggerInterface;
 
