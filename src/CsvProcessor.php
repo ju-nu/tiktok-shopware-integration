@@ -157,7 +157,7 @@ class CsvProcessor
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
             'shopId' => $shopId,
-            'orderStatusId' => 5, // "Zur Lieferung bereit"
+            'orderStatusId' => 0, // "Zur Lieferung bereit"
             'paymentStatusId' => 12, // "Komplett bezahlt"
             'invoiceAmount' => $invoiceAmount,
             'invoiceAmountNet' => 0, // Placeholder, calculated below
