@@ -342,7 +342,7 @@ class CsvProcessor
         $groupKey = 'TK';
 
         // Check if customer exists
-        try {
+        /* try {
             $checkResponse = $this->shopwareClient->get('customers', [
                 'query' => [
                     'filter' => [
@@ -364,7 +364,7 @@ class CsvProcessor
             }
         } catch (\Exception $e) {
             $this->logger->warning("Failed to check for existing customer for $email: " . $e->getMessage());
-        }
+        } */
 
         $phoneNumber = str_replace('(+49)', '0', $row['Phone#'] ?? '');
 
