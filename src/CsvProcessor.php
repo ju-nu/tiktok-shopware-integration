@@ -241,10 +241,11 @@ class CsvProcessor
                 'articleNumber' => $sellerSku,
                 'articleName' => $row['ProductName'],
                 'quantity' => $quantity,
+                'shipped' => $quantity, //#
                 'price' => $unitPrice,
                 'taxId' => $taxId,
                 'taxRate' => (float)$taxRate,
-                'statusId' => 0, // Open
+                'statusId' => 2, // Open
             ];
 
             $lineNet = ($unitPrice * $quantity) / (1 + ($taxRate / 100));
