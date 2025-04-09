@@ -226,7 +226,7 @@ class CsvProcessor
                 $taxId = 4; // Default to tax ID 4
             }
 
-            $unitPrice = (float)str_replace(' EUR', '', $row['SKUUnitOriginalPrice']); // Artikelpreis
+            $unitPrice = (float)str_replace([' EUR', ','], ['', '.'], $row['SKUUnitOriginalPrice']);
             $quantity = (int)$row['Quantity'];
             $orderData['details'][] = [
                 'articleId' => $article['id'],
@@ -240,7 +240,7 @@ class CsvProcessor
             ];
 
             // Add Seller Discount as a separate line item
-            $sellerDiscount = (float)str_replace(' EUR', '', $row['SKUSellerDiscount']);
+            $sellerDiscount = (float)str_replace([' EUR', ','], ['', '.'], $row['SKUSellerDiscount']);
             if ($sellerDiscount != 0) {
                 $orderData['details'][] = [
                     'articleId' => 0,
@@ -256,7 +256,7 @@ class CsvProcessor
             }
 
             // Add Platform Discount as a separate line item
-            $platformDiscount = (float)str_replace(' EUR', '', $row['SKUPlatformDiscount']);
+            $platformDiscount = (float)str_replace([' EUR', ','], ['', '.'], $row['SKUPlatformDiscount']);
             if ($platformDiscount != 0) {
                 $orderData['details'][] = [
                     'articleId' => 0,
@@ -275,7 +275,7 @@ class CsvProcessor
         }
 
         // Add Shipping Fee Platform Discount as a tax-free line item
-        $shippingFeePlatformDiscount = (float)str_replace(' EUR', '', $firstRow['ShippingFeePlatformDiscount']);
+        $shippingFeePlatformDiscount = (float)str_replace([' EUR', ','], ['', '.'], $firstRow['ShippingFeePlatformDiscount']);
         if ($shippingFeePlatformDiscount != 0) {
             $orderData['details'][] = [
                 'articleId' => 0,
