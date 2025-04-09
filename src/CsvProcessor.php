@@ -350,21 +350,12 @@ class CsvProcessor
 
     private function generateEmailFromUsername(string $username): string
     {
-        // Convert to lowercase and trim whitespace
         $clean = strtolower(trim($username));
-
-        // Keep only valid email characters (letters, digits, dot, underscore, hyphen)
         $clean = preg_replace('/[^a-z0-9._-]/', '', $clean);
-
-        // Build the email address
         $email = $clean . '@egal.de';
-
-        // Validate email syntax
         if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $email;
         }
-
-        // Fallback: generate unique email
         return 'tiktok_' . uniqid() . '@egal.de';
     }
 
@@ -375,7 +366,7 @@ class CsvProcessor
         $groupKey = 'TK';
 
         // Check if customer exists
-        try {
+        /* try {
             $checkResponse = $this->shopwareClient->get('customers', [
                 'query' => [
                     'filter' => [
@@ -397,7 +388,7 @@ class CsvProcessor
             }
         } catch (\Exception $e) {
             $this->logger->warning("Failed to check for existing customer for $email: " . $e->getMessage());
-        }
+        } */
 
         $phoneNumber = str_replace('(+49)', '0', $row['Phone#'] ?? '');
 
