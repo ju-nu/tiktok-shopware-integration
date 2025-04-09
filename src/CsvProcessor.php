@@ -283,8 +283,8 @@ class CsvProcessor
                 'articleName' => 'TikTok Shop-Versandgebühr-Rabatte',
                 'quantity' => 1,
                 'price' => -$shippingFeePlatformDiscount, // Negative to subtract
-                'taxId' => 5, // Tax-free (0% VAT)
-                'taxRate' => 0.00, // Tax-free
+                'taxId' => $taxId,
+                'taxRate' => (float)$taxRate,
                 'mode' => 4,
                 'statusId' => 0, // Open
             ];
