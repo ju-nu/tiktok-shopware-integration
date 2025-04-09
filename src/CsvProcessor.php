@@ -301,7 +301,10 @@ class CsvProcessor
                 'mode' => 4,
                 'statusId' => 0, // Open
             ];
-            $shippingNet += -$shippingFeePlatformDiscount;
+            // Calculate net value of the shipping fee based on tax
+            $shippingTaxRate = $lastTaxRate > 0 ? $lastTaxRate : 19.0; // fallback to 19% if nothing found
+            $shippingNet = $invoiceShipping / (1 + ($shippingTaxRate / 100));
+            $orderData['invoiceShippingNet'] = round($shippingNet, 2);
         }
 
         // Calculate net values using the last tax rate (for articles, not shipping discount)
@@ -350,7 +353,7 @@ class CsvProcessor
 
     private function generateEmailFromUsername(string $username): string
     {
-/*         $clean = strtolower(trim($username));
+        /*         $clean = strtolower(trim($username));
         $clean = preg_replace('/[^a-z0-9._-]/', '', $clean);
         $email = 'tikt_' . $clean . '@egal.de';
         if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
