@@ -245,7 +245,7 @@ class CsvProcessor
                 'price' => $unitPrice,
                 'taxId' => $taxId,
                 'taxRate' => (float)$taxRate,
-                'statusId' => 2, // Open
+                'statusId' => 4, // Open
             ];
 
             $lineNet = ($unitPrice * $quantity) / (1 + ($taxRate / 100));
