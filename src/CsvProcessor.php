@@ -140,8 +140,8 @@ class CsvProcessor
         }
 
         // Use OriginalShippingFee as invoiceShipping
-        $invoiceShipping = (float)str_replace(' EUR', '', $firstRow['OriginalShippingFee']);
-        $invoiceAmount = (float)str_replace(' EUR', '', $firstRow['OrderAmount']);
+        $invoiceShipping = (float)str_replace([' EUR', ','], ['', '.'], $firstRow['OriginalShippingFee']);
+        $invoiceAmount = (float)str_replace([' EUR', ','], ['', '.'], $firstRow['OrderAmount']);
 
         // Convert CreatedTime and PaidTime to Shopware's expected format (Y-m-d H:i:s)
         $orderTime = date('Y-m-d H:i:s', strtotime($firstRow['CreatedTime']));
