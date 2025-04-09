@@ -352,11 +352,11 @@ class CsvProcessor
     {
         $clean = strtolower(trim($username));
         $clean = preg_replace('/[^a-z0-9._-]/', '', $clean);
-        $email = $clean . '@egal.de';
+        $email = 'tikt_' . $clean . '@egal.de';
         if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $email;
         }
-        return 'tiktok_' . uniqid() . '@egal.de';
+        return 'tikt_' . uniqid() . '@egal.de';
     }
 
     private function createGuestCustomer(array $row): ?int
