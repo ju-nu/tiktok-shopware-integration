@@ -350,12 +350,12 @@ class CsvProcessor
 
     private function generateEmailFromUsername(string $username): string
     {
-        $clean = strtolower(trim($username));
+/*         $clean = strtolower(trim($username));
         $clean = preg_replace('/[^a-z0-9._-]/', '', $clean);
         $email = 'tikt_' . $clean . '@egal.de';
         if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $email;
-        }
+        } */
         return 'tikt_' . uniqid() . '@egal.de';
     }
 
