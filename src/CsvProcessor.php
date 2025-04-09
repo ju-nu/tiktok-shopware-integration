@@ -400,6 +400,7 @@ class CsvProcessor
             'firstname' => $recipient['firstName'],
             'lastname' => $recipient['lastName'],
             'salutation' => 'mr',
+            'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'password' => bin2hex(random_bytes(8)),
             'billing' => [
                 'firstName' => $recipient['firstName'],
