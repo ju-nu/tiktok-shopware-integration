@@ -35,7 +35,7 @@
         }
 
         fetchLogs(); // Initial load
-        setInterval(fetchLogs, 5000); // Refresh every 5s
+        setInterval(fetchLogs, 1000); // Refresh every 5s
     </script>
 </body>
 </html>
