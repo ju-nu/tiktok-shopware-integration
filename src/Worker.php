@@ -34,8 +34,8 @@ class Worker
             $files = glob("$queuePath/*.csv");
 
             if (empty($files)) {
-                $this->logger->debug("No files in queue, sleeping for 300 seconds");
-                sleep(300);
+                $this->logger->debug("No files in queue found, re-check in 60 seconds");
+                sleep(60);
                 continue;
             }
 
