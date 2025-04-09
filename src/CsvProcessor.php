@@ -157,7 +157,7 @@ class CsvProcessor
             'paymentId' => $this->shopwareClient->getConfig()['payment_method_id'],
             'dispatchId' => $this->shopwareClient->getConfig()['shipping_method_id'],
             'shopId' => $shopId,
-            'orderStatusId' => 7, // "Zur Lieferung bereit"
+            'orderStatusId' => 0, // Offen
             'paymentStatusId' => 12, // "Komplett bezahlt"
             'invoiceAmount' => $invoiceAmount,
             'invoiceAmountNet' => 0, // Placeholder, calculated below
@@ -241,11 +241,10 @@ class CsvProcessor
                 'articleNumber' => $sellerSku,
                 'articleName' => $row['ProductName'],
                 'quantity' => $quantity,
-                'shipped' => $quantity, //#
                 'price' => $unitPrice,
                 'taxId' => $taxId,
                 'taxRate' => (float)$taxRate,
-                'statusId' => 3, // Open
+                'statusId' => 0, // Open
             ];
 
             $lineNet = ($unitPrice * $quantity) / (1 + ($taxRate / 100));
