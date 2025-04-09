@@ -150,7 +150,7 @@ class CsvProcessor
         // Get shopId from config, default to 1
         $shopId = $this->shopwareClient->getConfig()['shop_id'] ?? 1;
 
-        $phoneNumber = str_replace('(+49)', '0', $row['Phone#'] ?? '');
+        $phoneNumber = str_replace('(+49)', '0', $firstRow['Phone#'] ?? '');
 
         $orderData = [
             'customerId' => $customerId,
@@ -197,7 +197,10 @@ class CsvProcessor
             'details' => [],
         ];
 
-        $lastTaxRate = null;
+        $lastTaxRate = 0.00;
+        $lastTaxId = 5;
+        $netTotal = 0.0;
+        $shippingNet = 0.0;
 
         foreach ($orderRows as $row) {
             foreach ($requiredFields as $key => $default) {
@@ -226,6 +229,11 @@ class CsvProcessor
                 $taxId = 4; // Default to tax ID 4
             }
 
+            if ((float)$taxRate > (float)$lastTaxRate) {
+                $lastTaxRate = (float)$taxRate;
+                $lastTaxId = $taxId;
+            }
+
             $unitPrice = (float)str_replace([' EUR', ','], ['', '.'], $row['SKUUnitOriginalPrice']);
             $quantity = (int)$row['Quantity'];
             $orderData['details'][] = [
@@ -238,6 +246,9 @@ class CsvProcessor
                 'taxRate' => (float)$taxRate,
                 'statusId' => 0, // Open
             ];
+
+            $lineNet = ($unitPrice * $quantity) / (1 + ($taxRate / 100));
+            $netTotal += $lineNet;
 
             // Add Seller Discount as a separate line item
             $sellerDiscount = (float)str_replace([' EUR', ','], ['', '.'], $row['SKUSellerDiscount']);
@@ -253,6 +264,8 @@ class CsvProcessor
                     'mode' => 4,
                     'statusId' => 0, // Open
                 ];
+                $discountNet = (-$sellerDiscount) / (1 + ($taxRate / 100));
+                $netTotal += $discountNet;
             }
 
             // Add Platform Discount as a separate line item
@@ -269,9 +282,9 @@ class CsvProcessor
                     'mode' => 4,
                     'statusId' => 0, // Open
                 ];
+                $discountNet = (-$platformDiscount) / (1 + ($taxRate / 100));
+                $netTotal += $discountNet;
             }
-
-            $lastTaxRate = (float)$taxRate; // Store last tax rate for net calculations
         }
 
         // Add Shipping Fee Platform Discount as a tax-free line item
@@ -283,17 +296,17 @@ class CsvProcessor
                 'articleName' => 'TikTok Shop-Versandgebühr-Rabatte',
                 'quantity' => 1,
                 'price' => -$shippingFeePlatformDiscount, // Negative to subtract
-                'taxId' => $taxId,
-                'taxRate' => (float)$taxRate,
+                'taxId' => $lastTaxId,
+                'taxRate' => (float)$lastTaxRate,
                 'mode' => 4,
                 'statusId' => 0, // Open
             ];
+            $shippingNet += -$shippingFeePlatformDiscount;
         }
 
         // Calculate net values using the last tax rate (for articles, not shipping discount)
-        $taxFactor = 1 + ($lastTaxRate / 100); // e.g., 1.07 for 7% VAT
-        $orderData['invoiceAmountNet'] = round($invoiceAmount / $taxFactor, 2);
-        $orderData['invoiceShippingNet'] = round($invoiceShipping / 1.00, 2); // Shipping net = gross since tax-free discount
+        $orderData['invoiceAmountNet'] = round($netTotal, 2);
+        $orderData['invoiceShippingNet'] = round($shippingNet, 2);
 
         try {
             $this->logger->debug("Order data being sent: " . json_encode($orderData));
