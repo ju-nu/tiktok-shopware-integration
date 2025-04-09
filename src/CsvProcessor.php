@@ -338,7 +338,7 @@ class CsvProcessor
     private function createGuestCustomer(array $row): ?int
     {
         $recipient = $this->splitRecipientName($row['Recipient'] ?? 'Unknown Unknown');
-        $email = $row['Email'] ?? 'guest_' . uniqid() . '@example.com';
+        $email = 'tiktok_' . uniqid() . '@egal.de';
         $groupKey = 'TK';
 
         // Check if customer exists
