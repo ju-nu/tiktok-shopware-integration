@@ -103,6 +103,11 @@ class CsvProcessor
         $firstRow = $orderRows[0];
         $recipient = $this->splitRecipientName($firstRow['Recipient'] ?? 'Unknown Unknown');
 
+        // Preprocess address fields to handle house numbers in parentheses
+        $address = $this->extractStreetAndNumber($firstRow['StreetName'] ?? 'Unknown', $firstRow['HouseNameorNumber'] ?? '');
+        $firstRow['StreetName'] = $address['street'];
+        $firstRow['HouseNameorNumber'] = $address['number'];
+
         // Create guest customer
         $customerId = $this->createGuestCustomer($firstRow);
         if (!$customerId) {
@@ -353,12 +358,6 @@ class CsvProcessor
 
     private function generateEmailFromUsername(string $username): string
     {
-        /*         $clean = strtolower(trim($username));
-        $clean = preg_replace('/[^a-z0-9._-]/', '', $clean);
-        $email = 'tikt_' . $clean . '@egal.de';
-        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return $email;
-        } */
         return 'tikt_' . uniqid() . '@egal.de';
     }
 
@@ -368,34 +367,14 @@ class CsvProcessor
         $email = $this->generateEmailFromUsername($row['BuyerUsername']);
         $groupKey = 'TK';
 
-        // Check if customer exists
-        /* try {
-            $checkResponse = $this->shopwareClient->get('customers', [
-                'query' => [
-                    'filter' => [
-                        ['property' => 'email', 'value' => $email],
-                        ['property' => 'groupKey', 'value' => $groupKey],
-                    ],
-                ],
-            ]);
-
-            $existing = json_decode($checkResponse->getBody()->getContents(), true);
-            if (isset($existing['data']) && !empty($existing['data'])) {
-                foreach ($existing['data'] as $customer) {
-                    if ($customer['email'] === $email && $customer['groupKey'] === $groupKey) {
-                        $existingId = $customer['id'];
-                        $this->logger->info("Existing customer found for email $email: ID $existingId");
-                        return $existingId;
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            $this->logger->warning("Failed to check for existing customer for $email: " . $e->getMessage());
-        } */
+        // Preprocess address fields to handle house numbers in parentheses
+        $address = $this->extractStreetAndNumber($row['StreetName'] ?? 'Unknown', $row['HouseNameorNumber'] ?? '');
+        $row['StreetName'] = $address['street'];
+        $row['HouseNameorNumber'] = $address['number'];
 
         $phoneNumber = str_replace('(+49)', '0', $row['Phone#'] ?? '');
 
-        // Create new guest customer if not found
+        // Create new guest customer
         $customerData = [
             'email' => $email,
             'active' => true,
@@ -447,6 +426,37 @@ class CsvProcessor
         return [
             'firstName' => $firstName ?: 'Unknown',
             'lastName' => $lastName ?: 'Unknown',
+        ];
+    }
+
+    private function extractStreetAndNumber(string $streetName, string $houseNumber): array
+    {
+        // Check if streetName contains a number in parentheses, e.g., "Siechenhausstraße(11)"
+        if (preg_match('/^(.*?)\s*\((\d+[a-zA-Z]?)\)$/', $streetName, $matches)) {
+            $cleanStreet = trim($matches[1]);
+            $extractedNumber = $matches[2];
+            $this->logger->debug("Extracted house number from StreetName '$streetName': Street='$cleanStreet', Number='$extractedNumber'");
+            return [
+                'street' => $cleanStreet,
+                'number' => $extractedNumber,
+            ];
+        }
+
+        // If StreetName contains a number at the end (e.g., "Westerwaldstraße 139"), and HouseNameorNumber is empty or redundant
+        if (preg_match('/^(.*?)\s+(\d+[a-zA-Z]?)$/', $streetName, $matches) && (empty($houseNumber) || $houseNumber === $streetName)) {
+            $cleanStreet = trim($matches[1]);
+            $extractedNumber = $matches[2];
+            $this->logger->debug("Extracted house number from StreetName '$streetName' (space-separated): Street='$cleanStreet', Number='$extractedNumber'");
+            return [
+                'street' => $cleanStreet,
+                'number' => $extractedNumber,
+            ];
+        }
+
+        // If no number is found in StreetName, use the provided HouseNameorNumber
+        return [
+            'street' => $streetName,
+            'number' => $houseNumber,
         ];
     }
 }
