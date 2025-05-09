@@ -431,32 +431,51 @@ class CsvProcessor
 
     private function extractStreetAndNumber(string $streetName, string $houseNumber): array
     {
-        // Check if streetName contains a number in parentheses, e.g., "Siechenhausstraße(11)"
-        if (preg_match('/^(.*?)\s*\((\d+[a-zA-Z]?)\)$/', $streetName, $matches)) {
-            $cleanStreet = trim($matches[1]);
-            $extractedNumber = $matches[2];
-            $this->logger->debug("Extracted house number from StreetName '$streetName': Street='$cleanStreet', Number='$extractedNumber'");
-            return [
-                'street' => $cleanStreet,
-                'number' => $extractedNumber,
-            ];
-        }
-
-        // If StreetName contains a number at the end (e.g., "Westerwaldstraße 139"), and HouseNameorNumber is empty or redundant
-        if (preg_match('/^(.*?)\s+(\d+[a-zA-Z]?)$/', $streetName, $matches) && (empty($houseNumber) || $houseNumber === $streetName)) {
-            $cleanStreet = trim($matches[1]);
-            $extractedNumber = $matches[2];
-            $this->logger->debug("Extracted house number from StreetName '$streetName' (space-separated): Street='$cleanStreet', Number='$extractedNumber'");
-            return [
-                'street' => $cleanStreet,
-                'number' => $extractedNumber,
-            ];
-        }
-
-        // If no number is found in StreetName, use the provided HouseNameorNumber
-        return [
-            'street' => $streetName,
-            'number' => $houseNumber,
+        // Default return values
+        $result = [
+            'street' => trim($streetName) ?: 'Unknown',
+            'number' => trim($houseNumber) ?: '',
         ];
+    
+        // If streetName is empty or just whitespace, use defaults and log
+        if (empty(trim($streetName))) {
+            $this->logger->warning("StreetName is empty, using default: street='Unknown', number='$houseNumber'");
+            return $result;
+        }
+    
+        // Pattern to match house numbers in various formats:
+        // - "Street 12", "Street 12a", "Street 12-14", "Street 12/a"
+        // - "Street(12)", "Street (12a)"
+        // - "Street12", "Street12a" (no space)
+        $pattern = '/^(.*?)(?:\s+|\(|)([\d]+[a-zA-Z]?[-\/]?[a-zA-Z\d]*)(?:\)|)?$/i';
+    
+        // Try to extract house number from StreetName
+        if (preg_match($pattern, trim($streetName), $matches)) {
+            $cleanStreet = trim($matches[1]);
+            $extractedNumber = trim($matches[2]);
+    
+            // Ensure the extracted street is not empty
+            if (!empty($cleanStreet)) {
+                $result['street'] = $cleanStreet;
+                $result['number'] = $extractedNumber;
+                $this->logger->debug("Extracted from StreetName '$streetName': Street='$cleanStreet', Number='$extractedNumber'");
+                return $result;
+            }
+        }
+    
+        // If no number was found in StreetName, use StreetName as street and HouseNameorNumber as number
+        $result['street'] = trim($streetName);
+    
+        // Validate HouseNameorNumber: ensure it looks like a house number (e.g., "12", "12a", "12-14", "12/a")
+        if (preg_match('/^[\d]+[a-zA-Z]?[-\/]?[a-zA-Z\d]*$/', trim($houseNumber))) {
+            $result['number'] = trim($houseNumber);
+            $this->logger->debug("Using StreetName '$streetName' as street, HouseNameorNumber '$houseNumber' as number");
+        } elseif (!empty(trim($houseNumber)) && trim($houseNumber) !== trim($streetName)) {
+            // If HouseNameorNumber is not a valid number and not redundant, log a warning
+            $this->logger->warning("HouseNameorNumber '$houseNumber' is not a valid house number for StreetName '$streetName', ignoring");
+            $result['number'] = '';
+        }
+    
+        return $result;
     }
 }
